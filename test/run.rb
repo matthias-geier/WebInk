@@ -1,19 +1,20 @@
 #!/usr/bin/env ruby
 
-require 'simple_mmap'
-require 'webink/beauty'
+require './lib/webink/database.rb'
+require './lib/webink/model.rb'
+require './lib/webink/controller.rb'
+require './lib/webink/beauty.rb'
 require 'test/unit'
 
 config = {
-  'db_type' => "sqlite3",
-  'db_server' => "./test.sqlite"
+  :db_type => "sqlite3",
+  :db_server => "./test.sqlite"
 }
 model_classes = Array.new
 
 Dir.chdir(File.dirname(__FILE__))
 
-require "#{config["db_type"]}"
-require 'webink'
+require "#{config[:db_type]}"
 
 models = Dir.new "./models"
 models.each do |model|

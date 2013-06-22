@@ -12,7 +12,8 @@ module Ink
   #   class App < Ink::Controller
   #
   #     def index
-  #       redirect_to :controller => "my_app", :module => "feed", :id => 29382374
+  #       redirect_to :controller => "my_app", :module => "feed",
+  #         :id => 29382374
   #     end
   #
   #     def feed
@@ -29,9 +30,11 @@ module Ink
   #   end
   #
   # A controller named App should have the filename app.rb and be
-  # placed inside the project controller folder. It can have
+  # placed inside the project controllers folder. It can have
   # instance methods that are usually refered to as modules.
   # So a route should contain at least a :controller and a :module.
+  # Note that controller filenames are not camelized when they are
+  # being searched for by the dispatcher.
   #
   # In the sample above there are three modules, index redirects
   # to feed, feed renders a template and partial renders a partial.
@@ -72,10 +75,11 @@ module Ink
   # The routes being evaluated by the dispatcher are simple regular expressions.
   # This example fits the controller from earlier.
   #
-  #   root = "/folder"
+  #   Beauty.root = "/folder"
   #
-  #   routes = [
-  #     [ /^\/([^\/]+)\/([^\/]+)(\/([0-9]+))?$/, {:controller => "$1", :module => "$2", :id => "$4"} ],
+  #   Beauty.routes = [
+  #     [ /^\/([^\/]+)\/([^\/]+)(\/([0-9]+))?$/,
+  #       {:controller => "$1", :module => "$2", :id => "$4"} ],
   #     [ /^\/([^\/]+)\/?$/, {:controller => "$1", :module => "index"} ],
   #     [ /^\/?$/, {:controller => "app", :module => "index"} ],
   #   ]
@@ -94,7 +98,8 @@ module Ink
   # will dynamically match the project path etc. (and is also using
   # the root variable from the routes.rb)
   #
-  #   link_to "name", "controller", "module", "param1", "param2", {:class => "h1", :id => "14"}
+  #   link_to "name", "controller", "module", "param1", "param2",
+  #     {:class => "h1", :id => "14"}
   #
   # The link above will produce this:
   #
@@ -126,18 +131,18 @@ module Ink
   # There is some basic support for it in webink, that will make certain
   # bits easier. For more information have a look at the blog-demo.
   #
-  # Each controller usually expects cookies to work, if you handle
-  # sessions via cgi. Whenever cookies do not work, or you do not
-  # intend to use them in the first place, path_to and link_to watch
-  # out for the instance variables @session_key and @session_id
-  # which are added via GET to the path/hyperlink, that they construct.
-  # Therefore the tools should not be used for external linking. The
-  # dispatcher automatically filters the GET session_id when using
-  # POST and adds it to the cgi.params, so sessions can be used confortably.
+  # Each controller usually expects cookies to work. Whenever cookies
+  # do not work, or you do not intend to use them in the first place,
+  # path_to and link_to watch out for the instance variables @session_key
+  # and @session_id which are added via GET to the path/hyperlink, that
+  # they construct. Therefore the tools should not be used for external
+  # linking. The dispatcher automatically filters the GET session_id when
+  # using POST and adds it to the cgi.params, so sessions can be used
+  # confortably.
   #
-  # Per default, the @session_key should be "_session_id" as specified
-  # in the cgi/session library from ruby core, but the controller offers
-  # some freedom, in case you may want a different key name for some reason.
+  # Per default, the @session_key should be "_session_id", but the
+  # controller offers some freedom, in case you may want a different
+  # key name for some reason.
   #
   #
   #
@@ -169,17 +174,18 @@ module Ink
         template = File.open "./views/#{args[:template]}.html.erb", "r"
         erb = ERB.new template.readlines * "\n"
         template.close
-        puts @params[:cgi].header
-        erb.run self.getBinding(args[:locals])
+        [200, @params[:header], erb.result(self.getBinding(args[:locals]))]
       elsif args[:partial]
-        template = File.open "./views/#{(File.dirname(args[:partial]) != ".") ? "#{File.dirname(args[:partial])}/" : ""}_#{File.basename(args[:partial])}.html.erb", "r"
+        template = File.open "./views/#{
+          (File.dirname(args[:partial]) != ".") ?
+            "#{File.dirname(args[:partial])}/" : ""
+          }_#{File.basename(args[:partial])}.html.erb", "r"
         erb = ERB.new template.readlines * "\n"
         template.close
         if not args[:standalone]
-          erb.result self.getBinding(args[:locals])
+          erb.result(self.getBinding(args[:locals]))
         else
-          puts @params[:cgi].header
-          erb.run self.getBinding(args[:locals])
+          [200, @params[:header], erb.result(self.getBinding(args[:locals]))]
         end
       else
         nil
@@ -201,8 +207,8 @@ module Ink
         p[k] = v
       end
       if p[:controller] and p[:module]
-        controller = (Ink::Controller.verify p[:controller]).new p
-        (controller.verify p[:module]).call
+        controller = Ink::Controller.verify(p[:controller]).new(p)
+        controller.verify(p[:module]).call
       else
         nil
       end
@@ -218,8 +224,10 @@ module Ink
     # [param args:] Array of Strings and Hashes
     # [returns:] Hyperlink
     def link_to(*args)
-      raise ArgumentError.new("Expects an array.") if not args.instance_of? Array and args.length < 2
-      href = (@params[:root].length == 0) ? "/" : "#{@params[:root]}#{(@params[:root][@params[:root].length-1].chr == "/") ? "" : "/"}"
+      if not args.instance_of? Array and args.length < 2
+        raise ArgumentError.new("Expects an array.")
+      end
+      href = "#{@params[:root]}/"
       a = "<a "
       name = args[0]
       for i in 1...args.length
@@ -245,7 +253,7 @@ module Ink
     # [param args:] Array of Strings or String
     # [returns:] path
     def path_to(*args)
-      href = (@params[:root].length == 0) ? "/" : "#{@params[:root]}#{(@params[:root][@params[:root].length-1].chr == "/") ? "" : "/"}"
+      href = "#{@params[:root]}/"
 
       if args.is_a? Array
         for i in 0...args.length
@@ -275,14 +283,15 @@ module Ink
     # [param controller:] Controller name string
     # [returns:] class or nil
     def self.verify(controller)
-      if not Module.const_defined? controller.capitalize
-        if File.exists? "./controllers/#{controller}.rb"
+      if not Module.const_defined?(controller.capitalize)
+        if File.exists? "./controllers/#{controller}.rb" and
+            Module.const_get(controller.capitalize).is_a?(Class)
           load "./controllers/#{controller}.rb"
         else
           raise NameError.new("Controller not found.")
         end
       end
-      ((Module.const_get controller.capitalize).is_a? Class) ? (Module.const_get controller.capitalize) : (raise NameError.new("Controller not found."))
+      Module.const_get(controller.capitalize)
     end
 
     # Instance method

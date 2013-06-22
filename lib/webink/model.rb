@@ -139,15 +139,26 @@ module Ink
         i = 0
         self.class.fields.each do |k,v|
           if data.is_a? Array
-            raise LoadError.new("Model cannot be loaded, wrong number or arguments #{data.length} expected #{self.class.fields.length} or #{self.class.fields.length - 1}") if data.length < self.class.fields.length - 1 or data.length > self.class.fields.length
-            if self.class.primary_key != k or data.length == self.class.fields.length
+            if data.length < self.class.fields.length - 1 or
+                data.length > self.class.fields.length
+              raise LoadError.new(<<ERR)
+Model cannot be loaded, wrong number or arguments #{data.length} expected
+#{self.class.fields.length} or #{self.class.fields.length - 1}
+ERR
+            end
+            if self.class.primary_key != k or
+                data.length == self.class.fields.length
               init_field k, data[i]
               i += 1
             else
               init_field self.class.primary_key, nil
             end
           else
-            raise LoadError.new("Model cannot be loaded, argument missing: #{key}") if not data.key?(k.to_s) and self.class.primary_key != k
+            if not data.key?(k.to_s) and self.class.primary_key != k
+              raise LoadError.new(<<ERR)
+Model cannot be loaded, argument missing: #{key}
+ERR
+            end
             init_field k, data[k.to_s]
           end
         end
@@ -188,7 +199,11 @@ module Ink
     # [key:] String
     # [value:] Object
     def init_field(key, value)
-      raise NameError.new("Model cannot use #{key} as field, it is blocked by primary key") if key.to_s.downcase == "pk"
+      if key.to_s.downcase == "pk"
+        raise NameError.new(<<ERR)
+Model cannot use #{key} as field, it is blocked by primary key
+ERR
+      end
       entry = self.class.make_safe(value)
       instance_variable_set("@#{key}", entry)
 
@@ -231,7 +246,11 @@ module Ink
     # [key:] String
     def init_foreign(key)
       k_table = self.class.str_to_tablename(key)
-      raise NameError.new("Model cannot use #{k_table} as foreign, it already exists") if k_table == "pk"
+      if k_table == "pk"
+        raise NameError.new(<<ERR)
+Model cannot use #{k_table} as foreign, it already exists
+ERR
+      end
       if not self.respond_to?(k_table)
         instance_variable_set("@#{k_table}", nil)
         self.class.send(:define_method, k_table) do
@@ -250,7 +269,11 @@ module Ink
     # nil if you do not want to change them. Old references are
     # automatically removed.
     def save
-      raise NotImplementedError.new("Cannot save to Database without field definitions") if not self.class.respond_to? :fields
+      if not self.class.respond_to?(:fields)
+      raise NotImplementedError.new(<<ERR)
+Cannot save to Database without field definitions
+ERR
+      end
       string = Array.new
       keystring = Array.new
       valuestring = Array.new
@@ -259,21 +282,33 @@ module Ink
         value = instance_variable_get "@#{k}"
         value = "NULL" if value.nil?
         if k != self.class.primary_key
-          string.push "`#{k}`=#{(value.is_a?(Numeric)) ? value : "\'#{value}\'"}"
+          string.push "`#{k}`=#{(value.is_a?(Numeric)) ? value :
+            "\'#{value}\'"}"
           keystring.push "`#{k}`"
           valuestring.push "#{(value.is_a?(Numeric)) ? value : "\'#{value}\'"}"
         else
-          pkvalue = "WHERE `#{self.class.primary_key}`=#{(value.is_a?(Numeric)) ? value : "\'#{value}\'"}"
+          pkvalue = "WHERE `#{self.class.primary_key}`=#{
+            (value.is_a?(Numeric)) ? value : "\'#{value}\'"
+            }"
         end
       end
       if pkvalue
         response = Ink::Database.database.find self.class, pkvalue
         if response.empty?
-          Ink::Database.database.query "INSERT INTO #{self.class.table_name} (#{keystring * ","}) VALUES (#{valuestring * ","});"
+          Ink::Database.database.query <<QUERY
+INSERT INTO #{self.class.table_name}
+(#{keystring * ","}) VALUES
+(#{valuestring * ","});
+QUERY
           pk = Ink::Database.database.last_inserted_pk(self.class)
-          instance_variable_set "@#{self.class.primary_key}", pk.is_a?(Numeric) ? pk : "\'#{pk}\'" if pk
+          if pk
+            instance_variable_set("@#{self.class.primary_key}",
+              pk.is_a?(Numeric) ? pk : "\'#{pk}\'")
+          end
         else
-          Ink::Database.database.query "UPDATE #{self.class.table_name} SET #{string * ","} #{pkvalue};"
+          Ink::Database.database.query <<QUERY
+UPDATE #{self.class.table_name} SET #{string * ","} #{pkvalue};
+QUERY
         end
       end
 
@@ -281,8 +316,10 @@ module Ink
         self.class.foreign.each do |k,v|
           value = instance_variable_get "@#{self.class.str_to_tablename(k)}"
           if value
-            Ink::Database.database.delete_all_links self, Ink::Model.classname(k), v
-            Ink::Database.database.create_all_links self, Ink::Model.classname(k), v, value
+            Ink::Database.database.delete_all_links(self,
+              Ink::Model.classname(k), v)
+            Ink::Database.database.create_all_links(self,
+              Ink::Model.classname(k), v, value)
           end
         end
       end
@@ -294,15 +331,24 @@ module Ink
     # obsolete. Disregard from using the instance anymore.
     # All links between models will be removed also.
     def delete
-      raise NotImplementedError.new("Cannot delete from Database without field definitions") if not self.class.respond_to? :fields
+      if not self.class.respond_to? :fields
+      raise NotImplementedError.new(<<ERR)
+Cannot delete from Database without field definitions
+ERR
+      end
       if self.class.respond_to? :foreign
         self.class.foreign.each do |k,v|
-          Ink::Database.database.delete_all_links self, Ink::Model.classname(k), v
+          Ink::Database.database.delete_all_links(self,
+            Ink::Model.classname(k), v)
         end
       end
 
       pkvalue = instance_variable_get "@#{self.class.primary_key}"
-      Ink::Database.database.remove self.class.name, "WHERE `#{self.class.primary_key}`=#{(pkvalue.is_a?(Numeric)) ? pkvalue : "\'#{pkvalue}\'"}"
+      Ink::Database.database.remove self.class.name, <<QUERY
+WHERE `#{self.class.primary_key}`=#{
+(pkvalue.is_a?(Numeric)) ? pkvalue : "\'#{pkvalue}\'"
+}
+QUERY
     end
 
     # Instance method
@@ -311,11 +357,15 @@ module Ink
     # matching foreign accessor
     # [param foreign_class:] Defines the foreign class name or class
     def find_references(foreign_class)
-      c = (foreign_class.is_a? Class) ? foreign_class : Ink::Model.classname(foreign_class)
+      c = (foreign_class.is_a? Class) ? foreign_class :
+        Ink::Model.classname(foreign_class)
       relationship = self.class.foreign[c.class_name]
       if relationship
-        result_array = (relationship == "many_many") ? Ink::Database.database.find_union(self.class, self.pk, c) : Ink::Database.database.find_references(self.class, self.pk, c)
-        instance_variable_set("@#{c.table_name}", (relationship =~ /^one_/) ? result_array.first : result_array)
+        result_array = (relationship == "many_many") ?
+          Ink::Database.database.find_union(self.class, self.pk, c) :
+          Ink::Database.database.find_references(self.class, self.pk, c)
+        instance_variable_set("@#{c.table_name}",
+          (relationship =~ /^one_/) ? result_array.first : result_array)
         true
       else
         false
@@ -330,7 +380,11 @@ module Ink
     # [returns:] Array of SQL statements
     def self.create
       result = Array.new
-      raise NotImplementedError.new("Cannot create a Database without field definitions") if not self.respond_to? :fields
+      if not self.respond_to?(:fields)
+        raise NotImplementedError.new(<<ERR)
+Cannot create a Database without field definitions
+ERR
+      end
 
       string = "CREATE TABLE #{self.table_name} ("
       mfk = self.foreign_key
@@ -346,7 +400,12 @@ module Ink
          tmp = self.foreign.map do |k,v|
            f_class = Ink::Model::classname(k)
            if v == "many_many" and (self.name <=> k) < 0
-             result.push "CREATE TABLE #{self.table_name}_#{Ink::Model::str_to_tablename(k)} (#{Ink::Database.database.primary_key_autoincrement*" "}, `#{self.foreign_key}` #{self.foreign_key_type}, `#{f_class.foreign_key}` #{f_class.foreign_key_type});"
+             result.push <<QUERY
+CREATE TABLE #{self.table_name}_#{Ink::Model::str_to_tablename(k)}
+(#{Ink::Database.database.primary_key_autoincrement*" "},
+`#{self.foreign_key}` #{self.foreign_key_type},
+`#{f_class.foreign_key}` #{f_class.foreign_key_type});
+QUERY
              nil
            end
            if v == "one_many" or (v == "one_one" and (self.name <=> k) < 0)
@@ -387,9 +446,12 @@ module Ink
     def self.str_to_classname(str)
       res = []
       str.scan(/((^|_)([a-z0-9]+))/) { |s|
-        res.push(s[2][0].upcase + ((s[2].length > 1) ? s[2][1,s[2].length] : "")) if s.length > 0
+        if s.length > 0
+          res.push(s[2][0].upcase +
+            ((s[2].length > 1) ? s[2][1,s[2].length] : ""))
+        end
       }
-      ((Module.const_get res.join).is_a? Class) ? res.join : nil
+      Module.const_get(res.join).is_a?(Class) ? res.join : nil
     end
 
     # Class method
@@ -404,7 +466,7 @@ module Ink
       str.scan(/([A-Z][a-z0-9]*)/) { |s|
         res.push (res.length>0) ? "_" + s.join.downcase : s.join.downcase
       }
-      ((Module.const_get str).is_a? Class) ? res.join : nil
+      Module.const_get(str).is_a?(Class) ? res.join : nil
     end
 
     # Class method
@@ -418,12 +480,15 @@ module Ink
       res = []
       if str[0] =~ /^[a-z]/
         str.scan(/((^|_)([a-z0-9]+))/) { |s|
-          res.push(s[2][0].upcase + ((s[2].length > 1) ? s[2][1,s[2].length] : "")) if s.length > 0
+          if s.length > 0
+            res.push(s[2][0].upcase +
+              ((s[2].length > 1) ? s[2][1,s[2].length] : ""))
+          end
         }
       else
         res.push str
       end
-      ((Module.const_get res.join).is_a? Class) ? (Module.const_get res.join) : nil
+      Module.const_get(res.join).is_a?(Class) ? Module.const_get(res.join) : nil
     end
 
     # Class method

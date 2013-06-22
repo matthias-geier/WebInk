@@ -10,21 +10,19 @@ module Ink
   #
   # Sample config for MySQL:
   #   config = {
-  #     "escape_post_data"  => false,
-  #     "production"        => true,
-  #     "db_type"           => "mysql",
-  #     "db_user"           => "yourusername",
-  #     "db_pass"           => "yourpassword",
-  #     "db_database"       => "yourdatabase",
-  #     "db_server"         => "localhost",
+  #     :production        => true,
+  #     :db_type           => "mysql",
+  #     :db_user           => "yourusername",
+  #     :db_pass           => "yourpassword",
+  #     :db_database       => "yourdatabase",
+  #     :db_server         => "localhost",
   #   }
   #
   # Sample config for SQLite3:
   #   config = {
-  #     "escape_post_data"  => false,
-  #     "production"        => true,
-  #     "db_type"           => "sqlite3",
-  #     "db_server"         => "/full/path/to/database.sqlite",
+  #     :production        => true,
+  #     :db_type           => "sqlite3",
+  #     :db_server         => "/full/path/to/database.sqlite",
   #   }
   #
   # == Usage
@@ -109,12 +107,13 @@ module Ink
     # possible.
     # [param config:] Hash of config parameters
     def initialize(config)
-      @type = config["db_type"]
+      @type = config[:db_type]
       if @type == "mysql"
-        @db = Mysql.real_connect(config["db_server"],config["db_user"],config["db_pass"],config["db_database"])
+        @db = Mysql.real_connect(config[:db_server],config[:db_user],
+          config[:db_pass],config[:db_database])
         @db.reconnect = true
       elsif @type == "sqlite3"
-        @db = SQLite3::Database.new(config["db_server"])
+        @db = SQLite3::Database.new(config[:db_server])
       else
         raise ArgumentError.new("Database undefined.")
       end
@@ -140,7 +139,11 @@ module Ink
     # Returns the Database instance or raises a Runtime Error
     # [returns:] Database instance
     def self.database
-      (@@database) ? @@database : (raise RuntimeError.new("No Database found. Create one first"))
+      if @@database
+        @@database
+      else
+        raise RuntimeError.new("No Database found. Create one first")
+      end
     end
 
     # Instance method
@@ -158,7 +161,9 @@ module Ink
           end
         end
       elsif @type == "sqlite3"
-        re = @db.query "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;"
+        re = @db.query <<QUERY
+SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;
+QUERY
         re.each do |row|
           row.each do |t|
             result.push t
@@ -273,7 +278,9 @@ module Ink
     # [param class_name:] Defines the __table__ name or class
     # [returns:] primary key or nil
     def last_inserted_pk(class_name)
-      class_name = Ink::Model.classname(class_name) unless class_name.is_a? Class
+      unless class_name.is_a?(Class)
+        class_name = Ink::Model.classname(class_name)
+      end
       table_name = class_name.table_name
       pk_name = class_name.primary_key
       return if table_name.nil? or pk_name.nil?
@@ -302,7 +309,8 @@ module Ink
     # [param class_name:] Defines the class name or class
     # [param params:] Additional SQL syntax like WHERE conditions (optional)
     def remove(class_name, params="")
-      table_name = (class_name.is_a? Class) ? class_name.table_name : Ink::Model.str_to_tablename(class_name)
+      table_name = (class_name.is_a? Class) ? class_name.table_name :
+        Ink::Model.str_to_tablename(class_name)
       return if table_name.nil?
       self.query("DELETE FROM #{table_name} #{params};")
     end
@@ -310,11 +318,14 @@ module Ink
     # Instance method
     #
     # Retrieve class instances, that are loaded with the database result set.
-    # [param class_name:] Defines the class name or class which should be queried
+    # [param class_name:] Defines the class name or class which should be
+    #                     queried
     # [param params:] Additional SQL syntax like WHERE conditions (optional)
     # [returns:] Array of class_name instances from the SQL result set
     def find(class_name, params="")
-      class_name = Ink::Model.classname(class_name) unless class_name.is_a? Class
+      unless class_name.is_a?(Class)
+        class_name = Ink::Model.classname(class_name)
+      end
       result = Array.new
       table_name = class_name.table_name
       return result if table_name.nil?
@@ -354,7 +365,11 @@ module Ink
       union_class = ((class1.class_name <=> class2.class_name) < 0) ?
         "#{tablename1}_#{tablename2}" :
         "#{tablename2}_#{tablename1}"
-      re = self.query("SELECT #{tablename2}.* FROM #{union_class}, #{tablename2} WHERE #{union_class}.#{fk1} = #{class1_id} AND #{union_class}.#{fk2} = #{tablename2}.#{pk2} #{params};")
+      re = self.query <<QUERY
+SELECT #{tablename2}.* FROM #{union_class}, #{tablename2}
+WHERE #{union_class}.#{fk1} = #{class1_id}
+AND #{union_class}.#{fk2} = #{tablename2}.#{pk2} #{params};
+QUERY
       re.each do |entry|
         instance = class2.new entry
         result.push instance
@@ -384,10 +399,19 @@ module Ink
       fk1 = class1.foreign_key
       tablename1 = class1.table_name
       tablename2 = class2.table_name
-      if ((class1.class_name <=> class2.class_name) < 0 and relationship == "one_one") or relationship == "one_many"
-        re = self.query "SELECT * FROM #{tablename2} WHERE #{class2.primary_key}=(SELECT #{class2.foreign_key} FROM #{tablename1} WHERE #{class1.primary_key}=#{class1_id});"
+      if ((class1.class_name <=> class2.class_name) < 0 and
+          relationship == "one_one") or relationship == "one_many"
+        re = self.query <<QUERY
+SELECT * FROM #{tablename2}
+WHERE #{class2.primary_key}=(
+  SELECT #{class2.foreign_key} FROM #{tablename1}
+  WHERE #{class1.primary_key}=#{class1_id}
+);
+QUERY
       else
-        re = self.query "SELECT * FROM #{tablename2} WHERE #{fk1} = #{class1_id} #{params};"
+        re = self.query <<QUERY
+SELECT * FROM #{tablename2} WHERE #{fk1} = #{class1_id} #{params};
+QUERY
       end
 
       re.each do |entry|
@@ -400,7 +424,8 @@ module Ink
     # Instance method
     #
     # Retrieve one class2 instance, that is related to the class1 instance with
-    # primary key class1_id. Only relevant for one_one and one_many relationships
+    # primary key class1_id. Only relevant for one_one and one_many
+    # relationships
     # [param class1:] Reference classname or class
     # [param class1_id:] Primary key value of the reference classname
     # [param class2:] Match classname or class
@@ -426,23 +451,42 @@ module Ink
     # [param type:] relationship type
     def delete_all_links(instance, link, type)
       if type == "one_one"
-        firstclass = ((instance.class.name.downcase <=> link.name.downcase) < 0) ? instance.class : link
-        secondclass = ((instance.class.name.downcase <=> link.name.downcase) < 0) ? link : instance.class
-        key = ((instance.class.name.downcase <=> link.name.downcase) < 0) ? instance.class.primary_key : instance.class.foreign_key
+        firstclass =
+          ((instance.class.name.downcase <=> link.name.downcase) < 0) ?
+          instance.class : link
+        secondclass =
+          ((instance.class.name.downcase <=> link.name.downcase) < 0) ?
+          link : instance.class
+        key =
+          ((instance.class.name.downcase <=> link.name.downcase) < 0) ?
+          instance.class.primary_key : instance.class.foreign_key
         value = instance.method(instance.class.primary_key).call
-        @db.query "UPDATE #{firstclass.table_name} SET #{secondclass.foreign_key}=NULL WHERE #{key}=#{value};"
+        @db.query <<QUERY
+UPDATE #{firstclass.table_name}
+SET #{secondclass.foreign_key}=NULL
+WHERE #{key}=#{value};
+QUERY
       elsif type == "one_many" or type == "many_one"
         firstclass = (type == "one_many") ? instance.class : link
         secondclass = (type == "one_many") ? link : instance.class
-        key = (type == "one_many") ? instance.class.primary_key : instance.class.foreign_key
+        key = (type == "one_many") ? instance.class.primary_key :
+          instance.class.foreign_key
         value = instance.method(instance.class.primary_key).call
-        @db.query "UPDATE #{firstclass.table_name} SET #{secondclass.foreign_key}=NULL WHERE #{key}=#{value};"
+        @db.query <<QUERY
+UPDATE #{firstclass.table_name}
+SET #{secondclass.foreign_key}=NULL
+WHERE #{key}=#{value};
+QUERY
       elsif type == "many_many"
         tablename1 = instance.class.table_name
         tablename2 = link.table_name
-        union_class = ((instance.class.name.downcase <=> link.name.downcase) < 0) ? "#{tablename1}_#{tablename2}" : "#{tablename2}_#{tablename1}"
+        union_class =
+          ((instance.class.name.downcase <=> link.name.downcase) < 0) ?
+          "#{tablename1}_#{tablename2}" : "#{tablename2}_#{tablename1}"
         value = instance.method(instance.class.primary_key).call
-        @db.query "DELETE FROM #{union_class} WHERE #{instance.class.foreign_key}=#{value};"
+        @db.query <<QUERY
+DELETE FROM #{union_class} WHERE #{instance.class.foreign_key}=#{value};
+QUERY
       end
     end
 
@@ -452,10 +496,12 @@ module Ink
     # link is the class of the related data, and type refers to the
     # relationship type of the two. When one tries to insert an array
     # for a x_one relationship, the last entry will be set.
-    # [param instance:] Instance of a class that refers to an existing database entry
+    # [param instance:] Instance of a class that refers to an existing
+    #                   database entry
     # [param link:] the related class (not a String, but class reference)
     # [param type:] relationship type
-    # [param value:] relationship data that was set, either a primary key value, or an instance, or an array of both
+    # [param value:] relationship data that was set, either a primary key value,
+    #                or an instance, or an array of both
     def create_all_links(instance, link, type, value)
       to_add = Array.new
       if value.is_a? Array
@@ -482,7 +528,8 @@ module Ink
     # The relationship between the two is defined by type. one_one
     # relationships are placing an additional call to delete_all_links
     # that will remove conflicts.
-    # [param instance:] Instance of a class that refers to an existing database entry
+    # [param instance:] Instance of a class that refers to an existing database
+    #                   entry
     # [param link:] the related class (not a String, but class reference)
     # [param type:] relationship type
     # [param value:] primary key of the relationship, that is to be created
@@ -492,27 +539,49 @@ module Ink
           re = self.find(link.name, "WHERE #{link.primary_key}=#{fk};").first
           self.delete_all_links re, instance.class, type
         end
-        firstclass = ((instance.class.name.downcase <=> link.name.downcase) < 0) ? instance.class : link
-        secondclass = ((instance.class.name.downcase <=> link.name.downcase) < 0) ? link : instance.class
-        key = ((instance.class.name.downcase <=> link.name.downcase) < 0) ? instance.class.primary_key : link.primary_key
+        firstclass =
+          ((instance.class.name.downcase <=> link.name.downcase) < 0) ?
+          instance.class : link
+        secondclass =
+          ((instance.class.name.downcase <=> link.name.downcase) < 0) ?
+          link : instance.class
+        key =
+          ((instance.class.name.downcase <=> link.name.downcase) < 0) ?
+          instance.class.primary_key : link.primary_key
         value = instance.method(instance.class.primary_key).call
-        fk_set = ((instance.class.name.downcase <=> link.name.downcase) < 0) ? fk : value
-        value_set = ((instance.class.name.downcase <=> link.name.downcase) < 0) ? value : fk
-        @db.query "UPDATE #{firstclass.table_name} SET #{secondclass.foreign_key}=#{fk} WHERE #{key}=#{value};"
+        fk_set =
+          ((instance.class.name.downcase <=> link.name.downcase) < 0) ?
+          fk : value
+        value_set =
+          ((instance.class.name.downcase <=> link.name.downcase) < 0) ?
+          value : fk
+        @db.query <<QUERY
+UPDATE #{firstclass.table_name} SET #{secondclass.foreign_key}=#{fk}
+WHERE #{key}=#{value};
+QUERY
       elsif type == "one_many" or type == "many_one"
         firstclass = (type == "one_many") ? instance.class : link
         secondclass = (type == "one_many") ? link : instance.class
-        key = (type == "one_many") ? instance.class.primary_key : link.primary_key
+        key = (type == "one_many") ? instance.class.primary_key :
+          link.primary_key
         value = instance.method(instance.class.primary_key).call
         fk_set = (type == "one_many") ? fk : value
         value_set = (type == "one_many") ? value : fk
-        @db.query "UPDATE #{firstclass.table_name} SET #{secondclass.foreign_key}=#{fk_set} WHERE #{key}=#{value_set};"
+        @db.query <<QUERY
+UPDATE #{firstclass.table_name} SET #{secondclass.foreign_key}=#{fk_set}
+WHERE #{key}=#{value_set};
+QUERY
       elsif type == "many_many"
         tablename1 = instance.class.table_name
         tablename2 = link.table_name
-        union_class = ((instance.class.name.downcase <=> link.name.downcase) < 0) ? "#{tablename1}_#{tablename2}" : "#{tablename2}_#{tablename1}"
+        union_class =
+          ((instance.class.name.downcase <=> link.name.downcase) < 0) ?
+          "#{tablename1}_#{tablename2}" : "#{tablename2}_#{tablename1}"
         value = instance.method(instance.class.primary_key).call
-        @db.query "INSERT INTO #{union_class} (#{instance.class.foreign_key}, #{link.foreign_key}) VALUES (#{value}, #{fk});"
+        @db.query <<QUERY
+INSERT INTO #{union_class}
+(#{instance.class.foreign_key}, #{link.foreign_key}) VALUES (#{value}, #{fk});
+QUERY
       end
     end
 

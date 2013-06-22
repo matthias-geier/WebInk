@@ -1,28 +1,26 @@
 #!/usr/bin/env ruby
 
-require 'simple_mmap'
-require 'webink/beauty'
+require 'webink'
 
 config = nil
 model_classes = Array.new
 
 begin
-  config = Ink::Beauty.load_config "./"
+  config = Ink::Beauty.new.load_config
 rescue Exception => bang
   puts "Error while loading config: #{bang}."
 end
 
-require "#{config["db_type"]}"
-require 'webink'
+require "#{config[:db_type]}"
 
 models = Dir.new "./models"
 models.each do |model|
   load "#{models.path}/#{model}" if model =~ /\.rb$/
-  model_classes.push Ink::Model.classname($1) if model =~ /^(.*)\.rb$/
+  model_classes << Ink::Model.classname($1) if model =~ /^(.*)\.rb$/
 end
 
 begin
-  Ink::Database.create config
+  Ink::Database.create(config)
   db = Ink::Database.database
   db_tables = db.tables
 

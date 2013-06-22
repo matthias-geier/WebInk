@@ -1,0 +1,47 @@
+#!/usr/bin/env ruby
+
+config_ru = <<CFG_RU
+require 'erb'
+require 'webink'
+
+run Ink::Beauty.new
+CFG_RU
+
+config_rb = <<CFG_RB
+Ink::Beauty.config = {
+  #sqlite3 config
+  :db_type => "sqlite3",
+  :db_server => "./db.sqlite",
+
+  #mysql config
+  #:db_type => "mysql"
+  #:db_user => "db_username"
+  #:db_pass => "db_password"
+  #:db_database => "db_database_name"
+  #:db_server => "localhost"
+}
+CFG_RB
+
+routes_rb = <<RT_RB
+Ink::Beauty.root = ""
+
+Ink::Beauty.routes = [
+  [ /^\\/([^\\/]+)\\/([^\\/]+)\\/?$/, {:controller => "$1", :module => "$2"} ],
+  [ /^\\/([^\\/]+)\\/?$/, {:controller => "$1", :module => "index"} ],
+  [ /^\\/?$/, {:controller => "admin", :module => "index"} ],
+]
+RT_RB
+
+if File.exist?("config") or File.exist?("config.rb")
+  puts "Directory already initialized. Exiting."
+  exit(0)
+end
+
+File.open("config.ru", "w"){ |f| f.puts config_ru }
+File.open("config.rb", "w"){ |f| f.puts config_rb }
+File.open("routes.rb", "w"){ |f| f.puts routes_rb }
+Dir.mkdir("controllers", 0775)
+Dir.mkdir("models", 0775)
+Dir.mkdir("views", 0775)
+Dir.mkdir("files", 0775)
+File.chmod(0775, "config.ru", "config.rb", "routes.rb")
