@@ -80,9 +80,11 @@ module Ink
       @params.merge!({:header => {}, :cookie => req.cookies})
       @params[:get] = Rack::Utils.parse_query(@env["QUERY_STRING"], '&;') || {}
       @params[:post] = {}
-      if @env['rack.input'].is_a?(StringIO)
-        @params[:post] =
-          Rack::Utils.parse_query(@env['rack.input'].read, "&;\n")
+      if req.post?
+        @params[:post] = req.params
+        @params[:post].reject! do |k,v|
+          @params[:get][k] and @params[:get][k] == v
+        end
       end
       self.load_config
       self.load_routes

@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name = "webink"
-  s.version = '3.0.0'
+  s.version = '3.0.1'
   s.summary = "A minimal web framework."
   s.author = "Matthias Geier"
   s.homepage = "https://github.com/matthias-geier/WebInk"

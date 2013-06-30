@@ -381,9 +381,8 @@ QUERY
     def self.create
       result = Array.new
       if not self.respond_to?(:fields)
-        raise NotImplementedError.new(<<ERR)
-Cannot create a Database without field definitions
-ERR
+        puts "Skipping #{self.name}...."
+        return []
       end
 
       string = "CREATE TABLE #{self.table_name} ("
