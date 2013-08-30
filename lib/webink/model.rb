@@ -156,7 +156,7 @@ ERR
           else
             if not data.key?(k.to_s) and self.class.primary_key != k
               raise LoadError.new(<<ERR)
-Model cannot be loaded, argument missing: #{key}
+Model cannot be loaded, argument missing: #{k}
 ERR
             end
             init_field k, data[k.to_s]
