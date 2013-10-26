@@ -4,6 +4,8 @@ require './lib/webink/database.rb'
 require './lib/webink/model.rb'
 require './lib/webink/controller.rb'
 require './lib/webink/beauty.rb'
+require './lib/webink/sql_adapter.rb'
+require './lib/sqlite3_adapter.rb'
 require 'test/unit'
 
 config = {

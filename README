@@ -1,5 +1,8 @@
 WebInk is a minimal framework for ruby assisting in website development. It
-uses rack to dispatch and works under linux.
+uses rack to dispatch and works under linux. Database adapters shipped with
+webink are sqlite3 and mysql; a generic SQL adapter is available which can
+be extended to access your favorite SQL database. Look into the sqlite3 or
+mysql adapters for guidance.
 
 Here is a small guide to installing it.
 
@@ -45,6 +48,20 @@ the tables, and for some advanced use cases, copy the webink_database
 and use the loaded models to easily import data.
 
 For more information on the folders, have a look at the sample project.
+
+
+
+
+== Production
+
+The config.rb comes with a production setting (see documentation on database.rb)
+which will hide all errors behind the appropriate HTTP error codes.
+
+To this day, no caching is done when enabling production, it is just a
+convenient way to hide possible stack traces.
+
+
+
 
 == Testing
 

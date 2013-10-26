@@ -65,6 +65,7 @@ module Ink
     # [returns:] Controller class
     def load_env
       require "#{@params[:config][:db_type]}"
+      require "#{@params[:config][:db_type]}_adapter"
       Dir.new("./models").each{ |m| load "./models/#{m}" if m =~ /\.rb$/ }
       load "./controllers/#{@params[:controller]}.rb"
       Ink::Controller.verify(@params[:controller]).new(@params)
