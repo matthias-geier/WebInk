@@ -72,3 +72,14 @@ cloning the github repos, navigating into the folder and running
 
 WebInk can be unit tested quite easily, unless you have no sqlite3 gem
 installed.
+
+
+
+
+== Project Future
+
+Due to the fact, that a VPS does not cost nearly enough anymore as it did a
+few years back and lacking time to maintain this gem, I am hereby marking
+this gem as 'final' and will not provide anymore updates.
+
+Fork away if you so please :).
