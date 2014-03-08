@@ -16,6 +16,14 @@ rack-compatible server, as there are so many tutorials out there already.
 
 * Added **webink_r** as dependency to the gem
 
+#### Upgrade path
+
+Rack up files (ex. *config.ru*) need to add
+
+```ruby
+  require 'webink/r'
+```
+
 
 ## Requirements
 
@@ -73,6 +81,5 @@ cloning the github repos, navigating into the repos root folder and running
   ruby test/run.rb
 ```
 
-WebInk can be unit tested quite easily, unless you have no sqlite3 gem
-installed.
-
+WebInk can be unit tested quite easily, it only requires the minitest and
+sqlite3 gems apart from webink.

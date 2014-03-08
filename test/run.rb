@@ -9,7 +9,7 @@ require './lib/webink/controller.rb'
 require './lib/webink/beauty.rb'
 require './lib/webink/sql_adapter.rb'
 require './lib/sqlite3_adapter.rb'
-require './lib/webink/r.rb'
+require './lib/webink_r.rb'
 require 'minitest/autorun'
 require 'minitest/spec'
 
