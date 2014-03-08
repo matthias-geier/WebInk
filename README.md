@@ -10,10 +10,14 @@ Not part of this guide is how to proxy from lighttpd/apache/nginx to the
 rack-compatible server, as there are so many tutorials out there already.
 
 
+## Version History and Upgrade paths
+
+### 3.1.2 -- 2014-03-08
+
+* Added **webink_r** as dependency to the gem
 
 
-
-== Requirements
+## Requirements
 
 A linux server with ruby, rubygems, (lighttpd or apache or nginx), (mysql or
 sqlite3) and the installed gems rack, (mysql or sqlite3) and webink.
@@ -22,16 +26,15 @@ would only be proxy for the thin/webrick installation. Most rack-compatible
 servers are available as gems.
 
 
-
-
-== Installation
+## Installation
 
 The project folder can be located anywhere on the system, but most admins
-seem to like /var/www as its root. Some web hosters even encourage you to
+seem to like */var/www* as its root. Some web hosters even encourage you to
 use your home folder. Where ever this may be, you need to provide a certain
 structure, so the dispatcher can find its resources. Assume the project
 foldername "blog".
 
+```
   config.rb   --this configures the project
   config.ru   --the rackup file to run the project
   routes.rb   --configures all the routing
@@ -39,47 +42,37 @@ foldername "blog".
   models      --this folder contains all models
   views       --this folder contains all views
   files       --all static files should be located here
+```
 
-To fetch this folder structure initially, call webink_init which comes
+To fetch this folder structure initially, call *webink_init* which comes
 with the gem. It will initialize your project with sample values.
 
-After creating some models, you can run webink_database to initialize
-the tables, and for some advanced use cases, copy the webink_database
+After creating some models, you can run *webink_database* to initialize
+the tables, and for some advanced use cases, copy the *webink_database*
 and use the loaded models to easily import data.
 
 For more information on the folders, have a look at the sample project.
 
 
+## Production
 
-
-== Production
-
-The config.rb comes with a production setting (see documentation on database.rb)
-which will hide all errors behind the appropriate HTTP error codes.
+The **config.rb** comes with a production setting (see documentation on
+**database.rb**) which will hide all errors behind the appropriate HTTP
+error codes.
 
 To this day, no caching is done when enabling production, it is just a
 convenient way to hide possible stack traces.
 
 
-
-
-== Testing
+## Testing
 
 A small unit test suite is provided in the github repos. You can run it by
-cloning the github repos, navigating into the folder and running
+cloning the github repos, navigating into the repos root folder and running
 
+```sh
   ruby test/run.rb
+```
 
 WebInk can be unit tested quite easily, unless you have no sqlite3 gem
 installed.
 
-
-
-
-== Project Future
-
-Due to the fact, that a VPS does not cost nearly enough anymore as it did a
-few years back and lacking time to maintain this gem, I am hereby marking
-this gem as 'final' and will not provide anymore updates.
-
-Fork away if you so please :).

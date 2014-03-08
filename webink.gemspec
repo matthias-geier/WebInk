@@ -10,4 +10,5 @@ Gem::Specification.new do |s|
   s.executables = ["webink_database", "webink_init"]
   s.required_ruby_version = '>= 1.9.3'
   s.add_dependency('rack', '>= 1.5.2')
+  s.add_dependency('webink_r', '>= 0.3.0')
 end

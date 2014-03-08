@@ -1,4 +1,4 @@
-Copyright (c) 2010-2013, Matthias Geier
+Copyright (c) 2010-2014, Matthias Geier
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
