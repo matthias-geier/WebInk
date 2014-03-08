@@ -3,4 +3,4 @@ require 'webink/model'
 require 'webink/controller'
 require 'webink/database'
 require 'webink/sql_adapter'
-
+require 'webink/r'

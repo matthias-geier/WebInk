@@ -2,7 +2,9 @@
 
 config_ru = <<CFG_RU
 require 'erb'
+require 'webink/r'
 require 'webink'
+#require 'webinkforms'
 
 run Ink::Beauty.new
 CFG_RU
