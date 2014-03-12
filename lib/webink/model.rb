@@ -134,45 +134,66 @@ module Ink
     # The primary key has no setter, but adds a getter called
     # pk for convenience.
     # [param data:] Hash of String => Objects or Array of Objects
-    def initialize(data)
-      if self.class.respond_to? :fields
-        i = 0
-        self.class.fields.each do |k,v|
-          if data.is_a? Array
-            if data.length < self.class.fields.length - 1 or
-                data.length > self.class.fields.length
-              raise LoadError.new(<<ERR)
-Model cannot be loaded, wrong number or arguments #{data.length} expected
-#{self.class.fields.length} or #{self.class.fields.length - 1}
-ERR
-            end
-            if self.class.primary_key != k or
-                data.length == self.class.fields.length
-              init_field k, data[i]
-              i += 1
-            else
-              init_field self.class.primary_key, nil
-            end
-          else
-            if not data.key?(k.to_s) and self.class.primary_key != k
-              raise LoadError.new(<<ERR)
-Model cannot be loaded, argument missing: #{k}
-ERR
-            end
-            init_field k, data[k.to_s]
-          end
+    def initialize(*data)
+      if self.class.respond_to?(:fields)
+        self.class.fields.keys.each{ |k| init_field(k) }
+      elsif data.length == 1 && data.first.is_a?(Hash)
+        data.first.each do |k, v|
+          init_field(k)
         end
-        if self.class.respond_to? :foreign
-          self.class.foreign.each do |k,v|
-            init_foreign k
-          end
+      end
+
+      if self.class.respond_to?(:foreign)
+        self.class.foreign.keys.each{ |k| init_foreign(k) }
+      end
+
+      update_fields(data)
+    end
+
+    def update_fields(*data)
+      if data.length == 1 && data.first.is_a?(Hash)
+        data = data.first
+      end
+
+      validate_update_fields(data)
+
+      if self.class.respond_to?(:fields)
+        if data.is_a?(Array)
+          data = update_fields_data_to_hash(data)
         end
-      else
-        data.each do |k,v|
-          init_no_fields k, v
+      end
+
+      data.each{ |k, v| self.send("#{k}=", v) }
+    end
+
+    def validate_update_fields(data)
+      return unless self.class.respond_to?(:fields)
+
+      if data.is_a?(Array)
+        if data.length < self.class.fields.length - 1 or
+            data.length > self.class.fields.length
+          raise LoadError.new(<<-ERR)
+            Model cannot be loaded, wrong number or arguments for Array:
+            #{data.length} expected #{self.class.fields.length}
+            or #{self.class.fields.length - 1}
+          ERR
         end
       end
     end
+    protected :validate_update_fields
+
+    def update_fields_data_to_hash(data)
+      field_keys = self.class.fields.keys
+
+      if data.length < field_keys.length
+        field_keys.reject!{ |k| k == self.class.primary_key }
+      end
+
+      data_hash = field_keys.zip(data)
+
+      return data_hash.reduce({}){ |acc, (k, v)| acc.merge({ k => v }) }
+    end
+    protected :update_fields_data_to_hash
 
     # Class method
     #
@@ -183,9 +204,9 @@ ERR
     def self.make_safe(value)
       if value.nil?
         nil
-      elsif value.is_a? String
+      elsif value.is_a?(String)
         value.gsub(/'/, '&#39;')
-      elsif value.is_a? Numeric
+      elsif value.is_a?(Numeric)
         value
       else
         "\'#{value}\'"
@@ -198,30 +219,31 @@ ERR
     # initialized with data[key].
     # [key:] String
     # [value:] Object
-    def init_field(key, value)
+    def init_field(key)
       if key.to_s.downcase == "pk"
-        raise NameError.new(<<ERR)
-Model cannot use #{key} as field, it is blocked by primary key
-ERR
+        raise NameError.new(<<-ERR)
+          Model cannot use #{key} as field, it is blocked by primary key
+        ERR
       end
-      entry = self.class.make_safe(value)
-      instance_variable_set("@#{key}", entry)
 
-      if not self.respond_to? key
+      unless self.respond_to?(key)
         self.class.send(:define_method, key) do
-          instance_variable_get "@#{key}"
+          instance_variable_get("@#{key}")
         end
       end
-      if self.class.primary_key != key
-        if not self.respond_to? "#{key}="
-          self.class.send(:define_method, "#{key}=") do |val|
-            val = self.class.make_safe(val)
-            instance_variable_set "@#{key}", val
-          end
+      unless self.respond_to?("#{key}=")
+        self.class.send(:define_method, "#{key}=") do |val|
+          val = self.class.make_safe(val)
+          instance_variable_set("@#{key}", val)
         end
-      else
+      end
+      if self.class.primary_key == key
         self.class.send(:define_method, "pk") do
-          instance_variable_get "@#{key.to_s.downcase}"
+          instance_variable_get("@#{key}")
+        end
+        self.class.send(:define_method, "pk=") do |val|
+          val = self.class.make_safe(val)
+          instance_variable_set("@#{key}", val)
         end
       end
     end
@@ -229,36 +251,16 @@ ERR
 
     # Private instance method
     #
-    # Evaluates the value type and provides an instance accessor
-    # to access the value by key.
-    # [key:] String
-    # [value:] Object
-    def init_no_fields(key, value)
-      entry = self.class.make_safe(value)
-      instance_variable_set "@#{key}", entry
-    end
-    private :init_no_fields
-
-    # Private instance method
-    #
     # Transforms the key to tablename and provides an instance accessor
     # and setter for the key. It is initialized with nil.
     # [key:] String
     def init_foreign(key)
-      k_table = self.class.str_to_tablename(key)
-      if k_table == "pk"
-        raise NameError.new(<<ERR)
-Model cannot use #{k_table} as foreign, it already exists
-ERR
+      key.underscore!
+      self.class.send(:define_method, key) do
+        instance_variable_get("@#{key}")
       end
-      if not self.respond_to?(k_table)
-        instance_variable_set("@#{k_table}", nil)
-        self.class.send(:define_method, k_table) do
-          instance_variable_get "@#{k_table}"
-        end
-        self.class.send(:define_method, "#{k_table}=") do |val|
-          instance_variable_set "@#{k_table}", val
-        end
+      self.class.send(:define_method, "#{key}=") do |val|
+        instance_variable_set("@#{key}", val)
       end
     end
     private :init_foreign
@@ -433,7 +435,7 @@ QUERY
     # This will retrieve a tablename-representation of the model name
     # [returns:] valid tablename
     def self.table_name
-      self.str_to_tablename self.name
+      self.name.underscore
     end
 
     # Class method
