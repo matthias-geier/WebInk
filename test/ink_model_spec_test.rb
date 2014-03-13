@@ -1,26 +1,84 @@
 
-describe AppleTree do
-  describe "unsaved tree" do
+describe Ink::Model do
+  describe "initialize model" do
     before do
-      @apple_tree = AppleTree.new(["red", nil, 5])
+      @a = AppleTree.new
     end
 
     after do
-      @apple_tree = nil
+      @a = nil
     end
 
-    it "should respond to pk" do
-      assert @apple_tree.respond_to?(:pk)
+    it "should create accessors for all fields" do
+      AppleTree.fields.keys.each do |f|
+        assert @a.respond_to?(f)
+        assert @a.respond_to?("#{f}=")
+      end
     end
 
-    it "should initially have a pk of nil" do
-      assert_nil @apple_tree.pk
+    it "should create an accessor for the primary key" do
+      assert @a.respond_to?("pk")
+      assert @a.respond_to?("pk=")
+    end
+
+    it "should create accessors for all foreign assocs" do
+      AppleTree.foreign.keys.each do |f|
+        assert @a.respond_to?(f.underscore)
+        assert @a.respond_to?("#{f.underscore}=")
+        assert @a.respond_to?(f.constantize.foreign_key)
+        assert @a.respond_to?("#{f.constantize.foreign_key}=")
+      end
+    end
+  end
+
+  describe "update fields" do
+    before do
+      @a = AppleTree.new
+    end
+
+    after do
+      @a = nil
+    end
+
+    it "should take a full-field array as argument and set the fields" do
+      w = Wig.new(1, 15)
+      assert 1, w.pk
+      assert 1, w.ref
+      assert 15, w.length
+    end
+
+    it "should take a full-field array without pk and set the fields" do
+      w = Wig.new(15)
+      assert 15, w.length
+    end
+
+    it "should raise an error when too few or too many arguments are given" do
+      assert_raises(LoadError){ Wig.new(1,2,3) }
+      assert_raises(LoadError){ AppleTree.new(1,2) }
+    end
+
+    it "should take a hash with any key number and set the fields" do
+      w = Wig.new(:ref => 1, :length => 15)
+      assert 1, w.pk
+      assert 1, w.ref
+      assert 15, w.length
+
+      a = AppleTree.new(:color => "blue")
+      assert_nil a.pk
+      assert_nil a.note
+      assert "blue", a.color
+    end
+
+    it "should set foreign keys for both accessors" do
+      @a.update_fields(:wig => 15, :color_spray_ref => [17])
+      assert 15, @a.wig_ref
+      assert [17], @a.color_spray
     end
   end
 
   describe "saved tree" do
     before do
-      @apple_tree = AppleTree.new(["red", nil, 5])
+      @apple_tree = AppleTree.new("red", nil, 5)
       @apple_tree.save
     end
 
@@ -83,7 +141,7 @@ describe AppleTree do
 
     describe "many_many relationships" do
       before do
-        @green_tree = AppleTree.new(["green", "comment", 6])
+        @green_tree = AppleTree.new("green", "comment", 6)
         @green_tree.save
         @spray = ColorSpray.new("color" => "blue")
         @spray.apple_tree = [@apple_tree]
@@ -156,7 +214,7 @@ describe AppleTree do
     end
 
     it "should calculate the correct last inserted primary key" do
-      w = Wig.new([15])
+      w = Wig.new(15)
       w.save
       assert_equal 1, Ink::Database.database.last_inserted_pk(Wig)
       w.delete

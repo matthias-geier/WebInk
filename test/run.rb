@@ -9,7 +9,8 @@ require './lib/webink/controller.rb'
 require './lib/webink/beauty.rb'
 require './lib/webink/sql_adapter.rb'
 require './lib/sqlite3_adapter.rb'
-require './lib/webink_r.rb'
+require './lib/webink/extensions/r.rb'
+require './lib/webink/extensions/string.rb'
 require 'minitest/autorun'
 require 'minitest/spec'
 
@@ -46,7 +47,7 @@ begin
   end
 
   Dir.open("./").each do |t|
-    load "./#{t}" if t =~ /^tc_.*\.rb$/
+    load "./#{t}" if t =~ /test\.rb$/
   end
 rescue Exception => bang
   puts "SQLError: #{bang}."

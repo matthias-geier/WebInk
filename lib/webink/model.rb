@@ -126,14 +126,16 @@ module Ink
 
     # Constructor
     #
-    # Keys from the data parameter will be converted into
-    # instance variables with getters and setters in place.
-    # The data parameter can be an Array of length of the
-    # defined fields or without the primary key. The order
-    # needs to be the same as the defined fields.
-    # The primary key has no setter, but adds a getter called
-    # pk for convenience.
-    # [param data:] Hash of String => Objects or Array of Objects
+    # Model without fields will take only a Hash and set accessors
+    # for all hash-keys given.
+    # Model with fields will initialize accessors according to
+    # fields and foreign definitions and, if applicable, call
+    # #update_fields on the arguments.
+    # Primary keys receive an addition getter and setter called 'pk'.
+    # Foreign keys receive two getters and setters each, one is the
+    # snakecase representation of the associated model and the other
+    # is the foreign key respectively.
+    # [param data:] (Hash of String => Objects) or (Array of Objects)
     def initialize(*data)
       if self.class.respond_to?(:fields)
         self.class.fields.keys.each{ |k| init_field(k) }
@@ -147,9 +149,16 @@ module Ink
         self.class.foreign.keys.each{ |k| init_foreign(k) }
       end
 
-      update_fields(data)
+      update_fields(*data)
     end
 
+    # Public instance method
+    #
+    # Will attempt to assign hash-values to the keys used as methods.
+    # When setting an array, it will be matched against the fields
+    # in the order the fields are defined. The array can contain the
+    # primary key or not.
+    # [param data:] (Hash of String => Objects) or (Array of Objects)
     def update_fields(*data)
       if data.length == 1 && data.first.is_a?(Hash)
         data = data.first
@@ -166,10 +175,16 @@ module Ink
       data.each{ |k, v| self.send("#{k}=", v) }
     end
 
+    # Private instance method
+    #
+    # Validates the given data if fields are defined on the model.
+    # If data is an array and not empty, it has to match the length
+    # of the fields or the length without the primary key.
+    # [param data:] (Hash of String => Objects) or (Array of Objects)
     def validate_update_fields(data)
       return unless self.class.respond_to?(:fields)
 
-      if data.is_a?(Array)
+      if data.is_a?(Array) && !data.empty?
         if data.length < self.class.fields.length - 1 or
             data.length > self.class.fields.length
           raise LoadError.new(<<-ERR)
@@ -180,8 +195,13 @@ module Ink
         end
       end
     end
-    protected :validate_update_fields
+    private :validate_update_fields
 
+    # Private instance method
+    #
+    # Assigns the array values to the respective fields keys.
+    # [param data:] Array of Objects
+    # [returns:] Hash of field-key => array-values
     def update_fields_data_to_hash(data)
       field_keys = self.class.fields.keys
 
@@ -193,7 +213,7 @@ module Ink
 
       return data_hash.reduce({}){ |acc, (k, v)| acc.merge({ k => v }) }
     end
-    protected :update_fields_data_to_hash
+    private :update_fields_data_to_hash
 
     # Class method
     #
@@ -215,10 +235,9 @@ module Ink
 
     # Private instance method
     #
-    # Provides an instance accessor and setter for the key. It is
-    # initialized with data[key].
+    # Provides an instance getter and setter for the key.
+    # Primary keys receive an extra 'pk' getter and setter.
     # [key:] String
-    # [value:] Object
     def init_field(key)
       if key.to_s.downcase == "pk"
         raise NameError.new(<<-ERR)
@@ -251,16 +270,24 @@ module Ink
 
     # Private instance method
     #
-    # Transforms the key to tablename and provides an instance accessor
-    # and setter for the key. It is initialized with nil.
+    # Transforms the key to snakecase and foreign_key of the associated
+    # model. It then provides an instance getter and setter for both
+    # accessing the same underlying instance variable.
     # [key:] String
     def init_foreign(key)
-      key.underscore!
-      self.class.send(:define_method, key) do
-        instance_variable_get("@#{key}")
+      k = key.underscore
+      klass = key.constantize
+      self.class.send(:define_method, k) do
+        instance_variable_get("@#{k}")
       end
-      self.class.send(:define_method, "#{key}=") do |val|
-        instance_variable_set("@#{key}", val)
+      self.class.send(:define_method, "#{k}=") do |val|
+        instance_variable_set("@#{k}", val)
+      end
+      self.class.send(:define_method, klass.foreign_key) do
+        instance_variable_get("@#{k}")
+      end
+      self.class.send(:define_method, "#{klass.foreign_key}=") do |val|
+        instance_variable_set("@#{k}", val)
       end
     end
     private :init_foreign
