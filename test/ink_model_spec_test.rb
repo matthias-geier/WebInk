@@ -76,39 +76,36 @@ describe Ink::Model do
     end
   end
 
-  describe "saved tree" do
+  describe "save and delete model" do
     before do
-      @apple_tree = AppleTree.new("red", nil, 5)
-      @apple_tree.save
     end
 
     after do
-      @apple_tree.delete
-      @apple_tree = nil
     end
 
-    it "should be found when searching for the last inserted primary key" do
-      assert_equal @apple_tree.pk, Ink::Database.database.find(AppleTree,
-        Ink::R.where("#{AppleTree.primary_key}=" +
-        "#{Ink::Database.database.last_inserted_pk(AppleTree)}")).first.pk
+    it "should persist a new model to the database" do
+      w = Wig.new(:length => 349)
+      w.save
+      assert Ink::Database.database.last_inserted_pk(Wig), w.pk
+      w_persisted = Wig.find.where("#{Wig.primary_key}=#{w.pk}").to_a.first
+      assert 349, w_persisted.length
+      w.delete
+      assert_nil Wig.find.where("#{Wig.primary_key}=#{w.pk}").to_a.first
     end
 
-    describe "load save tree from database" do
-      before do
-        @db_tree = Ink::Database.database.find(AppleTree).first
-      end
-
-      after do
-        @db_tree = nil
-      end
-
-      it "should have the correct attributes" do
-        assert_equal @apple_tree.color, @db_tree.color
-        assert_equal @apple_tree.note, @db_tree.note
-        assert_equal @apple_tree.height, @db_tree.height
-      end
+    it "should update an existing model in the database" do
+      w = Wig.new(:length => 349)
+      w.save
+      w.length = 350
+      w.save
+      w_persisted = Wig.find.where("#{Wig.primary_key}=#{w.pk}").to_a.first
+      assert 350, w_persisted.length
+      w.delete
+      assert_nil Wig.find.where("#{Wig.primary_key}=#{w.pk}").to_a.first
     end
+  end
 
+  describe "saved tree" do
     describe "one_many relationships" do
       before do
         @wig = Wig.new("length" => 15)

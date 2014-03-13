@@ -298,52 +298,36 @@ module Ink
     # nil if you do not want to change them. Old references are
     # automatically removed.
     def save
-      if not self.class.respond_to?(:fields)
-      raise NotImplementedError.new(<<ERR)
-Cannot save to Database without field definitions
-ERR
-      end
-      string = Array.new
-      keystring = Array.new
-      valuestring = Array.new
-      pkvalue = nil
-      self.class.fields.each do |k,v|
-        value = instance_variable_get "@#{k}"
-        value = "NULL" if value.nil?
-        if k != self.class.primary_key
-          string.push "`#{k}`=#{(value.is_a?(Numeric)) ? value :
-            "\'#{value}\'"}"
-          keystring.push "`#{k}`"
-          valuestring.push "#{(value.is_a?(Numeric)) ? value : "\'#{value}\'"}"
-        else
-          pkvalue = "WHERE `#{self.class.primary_key}`=#{
-            (value.is_a?(Numeric)) ? value : "\'#{value}\'"
-            }"
-        end
-      end
-      if pkvalue
-        response = Ink::Database.database.find self.class, pkvalue
-        if response.empty?
-          Ink::Database.database.query <<QUERY
-INSERT INTO #{self.class.table_name}
-(#{keystring * ","}) VALUES
-(#{valuestring * ","});
-QUERY
-          pk = Ink::Database.database.last_inserted_pk(self.class)
-          if pk
-            instance_variable_set("@#{self.class.primary_key}",
-              pk.is_a?(Numeric) ? pk : "\'#{pk}\'")
-          end
-        else
-          Ink::Database.database.query <<QUERY
-UPDATE #{self.class.table_name} SET #{string * ","} #{pkvalue};
-QUERY
-        end
+      unless self.class.respond_to?(:fields)
+        raise NotImplementedError.
+          new("Cannot save to Database without field definitions")
       end
 
-      if self.class.respond_to? :foreign
+      column_value_map = self.class.fields.keys.reduce({}) do |acc, k|
+        v = Ink::SqlAdapter.transform_to_sql(self.send(k))
+        acc["`#{k}`"] = v unless k == self.class.primary_key
+        acc
+      end
+
+      query = Ink::R::RelationString.new
+      if self.pk.nil? || self.class.find.where("`#{self.class.primary_key}`=" +
+        "#{Ink::SqlAdapter.transform_to_sql(self.pk)}").to_a.empty?
+
+        query.insert.into(self.class.table_name).
+          send(' _!', column_value_map.keys.join(',')).
+          values.send(' _!', column_value_map.values.join(',')).execute
+
+        self.pk = Ink::Database.database.last_inserted_pk(self.class)
+      else
+        query.update(self.class.table_name).
+          set(column_value_map.map{ |k, v| "#{k}=#{v}" }.join(',')).
+          where("`#{self.class.primary_key}`=" +
+          "#{Ink::SqlAdapter.transform_to_sql(self.pk)}").execute
+      end
+
+      if self.class.respond_to?(:foreign)
         self.class.foreign.each do |k,v|
-          value = instance_variable_get "@#{self.class.str_to_tablename(k)}"
+          value = self.send(k.underscore)
           if value
             Ink::Database.database.delete_all_links(self,
               Ink::Model.classname(k), v)
@@ -378,6 +362,10 @@ WHERE `#{self.class.primary_key}`=#{
 (pkvalue.is_a?(Numeric)) ? pkvalue : "\'#{pkvalue}\'"
 }
 QUERY
+    end
+
+    def self.find
+      return Ink::R.select('*').from(self.table_name)
     end
 
     # Instance method
