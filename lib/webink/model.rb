@@ -123,6 +123,8 @@ module Ink
   #
   #
   class Model
+    include Associations
+    extend Associations::ClassMethods
 
     # Constructor
     #
@@ -325,16 +327,34 @@ module Ink
           "#{Ink::SqlAdapter.transform_to_sql(self.pk)}").execute
       end
 
+      self.clear_associations
+      self.assign_associations
+      return
       if self.class.respond_to?(:foreign)
         self.class.foreign.each do |k,v|
           value = self.send(k.underscore)
           if value
-            Ink::Database.database.delete_all_links(self,
-              Ink::Model.classname(k), v)
             Ink::Database.database.create_all_links(self,
               Ink::Model.classname(k), v, value)
           end
         end
+      end
+    end
+
+    def clear_associations
+      return unless self.class.respond_to?(:foreign)
+
+      self.class.foreign.each do |k, v|
+        self.delete_all_associations(k, v)
+      end
+    end
+
+    def assign_associations
+      return unless self.class.respond_to?(:foreign)
+
+      self.class.foreign.each do |k, v|
+        klass = k.constantize
+        self.assign_all_associations(klass, v, self.send(k.underscore))
       end
     end
 
@@ -349,12 +369,7 @@ module Ink
 Cannot delete from Database without field definitions
 ERR
       end
-      if self.class.respond_to? :foreign
-        self.class.foreign.each do |k,v|
-          Ink::Database.database.delete_all_links(self,
-            Ink::Model.classname(k), v)
-        end
-      end
+      self.clear_associations
 
       pkvalue = instance_variable_get "@#{self.class.primary_key}"
       Ink::Database.database.remove self.class.name, <<QUERY
@@ -424,7 +439,7 @@ CREATE TABLE #{self.table_name}_#{Ink::Model::str_to_tablename(k)}
 QUERY
              nil
            end
-           if v == "one_many" or (v == "one_one" and (self.name <=> k) < 0)
+           if v == "many_one" or (v == "one_one" and (self.name <=> k) < 0)
              "`#{f_class.foreign_key}` #{f_class.foreign_key_type}"
            else
              nil

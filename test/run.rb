@@ -4,6 +4,7 @@ gem 'minitest'
 
 require 'webink/r'
 require './lib/webink/database.rb'
+require './lib/webink/associations.rb'
 require './lib/webink/model.rb'
 require './lib/webink/controller.rb'
 require './lib/webink/beauty.rb'
@@ -47,7 +48,7 @@ begin
   end
 
   Dir.open("./").each do |t|
-    load "./#{t}" if t =~ /test\.rb$/
+    load "./#{t}" if t =~ /_test\.rb$/
   end
 rescue Exception => bang
   puts "SQLError: #{bang}."

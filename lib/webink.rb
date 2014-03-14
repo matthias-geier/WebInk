@@ -1,6 +1,7 @@
 require 'webink/extensions/r'
 require 'webink/extensions/string'
 require 'webink/beauty'
+require 'webink/associations'
 require 'webink/model'
 require 'webink/controller'
 require 'webink/database'
