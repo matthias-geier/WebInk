@@ -312,8 +312,9 @@ module Ink
       end
 
       query = Ink::R::RelationString.new
-      if self.pk.nil? || self.class.find.where("`#{self.class.primary_key}`=" +
-        "#{Ink::SqlAdapter.transform_to_sql(self.pk)}").to_a.empty?
+      if self.pk.nil? || self.class.find{ |s|
+        s.where("`#{self.class.primary_key}`=" +
+        "#{Ink::SqlAdapter.transform_to_sql(self.pk)}") }.empty?
 
         query.insert.into(self.class.table_name).
           send(' _!', column_value_map.keys.join(',')).
@@ -380,7 +381,10 @@ QUERY
     end
 
     def self.find
-      return Ink::R.select('*').from(self.table_name)
+      return [] unless block_given?
+      return yield(Ink::R.select('*').from(self.table_name)).to_a.map do |row|
+        self.new(row)
+      end
     end
 
     # Instance method
