@@ -330,16 +330,6 @@ module Ink
 
       self.clear_associations
       self.assign_associations
-      return
-      if self.class.respond_to?(:foreign)
-        self.class.foreign.each do |k,v|
-          value = self.send(k.underscore)
-          if value
-            Ink::Database.database.create_all_links(self,
-              Ink::Model.classname(k), v, value)
-          end
-        end
-      end
     end
 
     def clear_associations
@@ -365,19 +355,15 @@ module Ink
     # obsolete. Disregard from using the instance anymore.
     # All links between models will be removed also.
     def delete
-      if not self.class.respond_to? :fields
-      raise NotImplementedError.new(<<ERR)
-Cannot delete from Database without field definitions
-ERR
+      unless self.class.respond_to?(:fields)
+        raise NotImplementedError.
+          new("Cannot delete from Database without field definitions")
       end
       self.clear_associations
 
-      pkvalue = instance_variable_get "@#{self.class.primary_key}"
-      Ink::Database.database.remove self.class.name, <<QUERY
-WHERE `#{self.class.primary_key}`=#{
-(pkvalue.is_a?(Numeric)) ? pkvalue : "\'#{pkvalue}\'"
-}
-QUERY
+      pk_value = Ink::SqlAdapter.transform_to_sql(self.pk)
+      Ink::R.delete.from(self.class.table_name).
+        where("`#{self.class.primary_key}`=#{pk_value}").execute
     end
 
     def self.find
@@ -440,6 +426,7 @@ QUERY
     # This will retrieve a string-representation of the model name
     # [returns:] valid classname
     def self.class_name
+      warn "deprecated #{self.name}#class_name"
       self.name
     end
 
@@ -458,6 +445,7 @@ QUERY
     # [param str:] some string
     # [returns:] valid classname or nil
     def self.str_to_classname(str)
+      warn "deprecated #{self.name}#str_to_classname"
       res = []
       str.scan(/((^|_)([a-z0-9]+))/) { |s|
         if s.length > 0
@@ -476,6 +464,7 @@ QUERY
     # [param str:] some string
     # [returns:] valid tablename or nil
     def self.str_to_tablename(str)
+      warn "deprecated #{self.name}#str_to_tablename"
       res = []
       str.scan(/([A-Z][a-z0-9]*)/) { |s|
         res.push (res.length>0) ? "_" + s.join.downcase : s.join.downcase
@@ -491,6 +480,7 @@ QUERY
     # [param str:] some string
     # [returns:] valid class or nil
     def self.classname(str)
+      warn "deprecated #{self.name}#classname"
       res = []
       if str[0] =~ /^[a-z]/
         str.scan(/((^|_)([a-z0-9]+))/) { |s|

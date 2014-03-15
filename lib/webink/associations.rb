@@ -2,6 +2,12 @@
 module Ink
   module Associations
     module ClassMethods
+      def order_table_names_for(klass)
+        klass = klass.to_s.constantize unless klass.is_a?(Ink::Model)
+
+        return [self, klass].sort{ |a, b| a.table_name <=> b.table_name }
+      end
+
       def join_table_for(klass)
         klass = klass.to_s.constantize unless klass.is_a?(Ink::Model)
 
@@ -12,7 +18,7 @@ module Ink
         klass = klass.to_s.constantize unless klass.is_a?(Ink::Model)
 
         if assoc_type == 'one_one'
-          return [self.table_name, klass.table_name].sort.first
+          return self.order_table_names_for(klass).table_name.first
         elsif assoc_type == 'one_many'
           return self.table_name
         elsif assoc_type == 'many_one'
@@ -34,31 +40,6 @@ module Ink
         end
       end
 
-      def delete_where_key_for(klass, assoc_type)
-        klass = klass.to_s.constantize unless klass.is_a?(Ink::Model)
-
-        if assoc_type == 'one_one'
-          return self.send((self.foreign_key <=> klass.foreign_key) < 0 ?
-            :primary_key : :foreign_key)
-        elsif ['many_one', 'many_many'].include?(assoc_type)
-          return self.foreign_key
-        elsif assoc_type == 'one_many'
-          return self.primary_key
-        end
-      end
-
-      def assign_where_key_for(klass, assoc_type)
-        klass = klass.to_s.constantize unless klass.is_a?(Ink::Model)
-
-        if assoc_type == 'one_one'
-          return [self, klass].sort{ |a, b| a.foreign_key <=> b.foreign_key }.
-            first.primary_key
-        elsif ['many_one', 'many_many'].include?(assoc_type)
-          return klass.primary_key
-        elsif assoc_type == 'one_many'
-          return self.primary_key
-        end
-      end
     end
 
     # Instance method
@@ -66,20 +47,45 @@ module Ink
     # Queries the database for foreign keys and attaches them to the
     # matching foreign accessor
     # [param foreign_class:] Defines the foreign class name or class
-    def find_references(foreign_class)
-      c = (foreign_class.is_a? Class) ? foreign_class :
-        Ink::Model.classname(foreign_class)
-      relationship = self.class.foreign[c.class_name]
-      if relationship
-        result_array = (relationship == "many_many") ?
-          Ink::Database.database.find_union(self.class, self.pk, c) :
-          Ink::Database.database.find_references(self.class, self.pk, c)
-        instance_variable_set("@#{c.table_name}",
-          (relationship =~ /^one_/) ? result_array.first : result_array)
-        true
-      else
-        false
+    def find_references(klass)
+      klass = klass.to_s.constantize unless klass.is_a?(Ink::Model)
+      if !self.class.respond_to?(:foreign) || !self.class.foreign[klass.name]
+        return nil
       end
+      assoc_type = self.class.foreign[klass.name]
+
+      result = klass.find do |s|
+        if block_given?
+          s.send(' !'){ |sub| yield(sub) }
+        end
+
+        s.where("`#{klass.primary_key}`").in! do |sub|
+          select_key, where_key = case assoc_type
+          when 'many_many'
+            [klass.foreign_key, self.class.foreign_key]
+          when 'one_many'
+            [klass.foreign_key, self.class.primary_key]
+          when 'many_one'
+            [klass.primary_key, self.class.foreign_key]
+          when 'one_one'
+            if self.class.order_table_names_for(klass).first == self
+              [klass.foreign_key, self.class.primary_key]
+            else
+              [klass.primary_key, self.class.foreign_key]
+            end
+          end
+          sub.select("`#{select_key}`").
+            from(self.class.foreign_key_table_for(klass, assoc_type)).
+            where("`#{where_key}`=#{Ink::SqlAdapter.transform_to_sql(self.pk)}")
+        end
+      end
+
+      if assoc_type.match(/^one_/)
+        result = result.first
+      end
+
+      self.send("#{klass.name.underscore}=", result)
+      return result
     end
 
     def delete_all_associations(klass, assoc_type)
@@ -87,14 +93,22 @@ module Ink
       klass = klass.to_s.constantize unless klass.is_a?(Ink::Model)
 
       if ['one_one', 'one_many', 'many_one'].include?(assoc_type)
+        where_key = case assoc_type
+        when 'many_one'
+          self.class.foreign_key
+        when 'one_many'
+          self.class.primary_key
+        when 'one_one'
+          self.class.order_table_names_for(klass).first == self ?
+            self.class.primary_key : self.class.foreign_key
+        end
+
         Ink::R.update(self.class.foreign_key_table_for(klass, assoc_type)).
           set("`#{self.class.update_key_for(klass, assoc_type)}`=NULL").
-          where("`#{self.class.delete_where_key_for(klass,
-          assoc_type)}`=#{self.pk}").execute
+          where("`#{where_key}`=#{self.pk}").execute
       else
         Ink::R.delete.from(self.class.foreign_key_table_for(klass, assoc_type)).
-          where("`#{self.class.delete_where_key_for(klass,
-          assoc_type)}`=#{self.pk}").execute
+          where("`#{self.class.foreign_key}`=#{self.pk}").execute
       end
     end
 
@@ -106,24 +120,28 @@ module Ink
       values.each do |v|
         next if v.nil?
 
+        vals = [v, self.pk].map{ |val| Ink::SqlAdapter.transform_to_sql(val) }
         if ['one_one', 'one_many', 'many_one'].include?(assoc_type)
           set_key = self.class.update_key_for(klass, assoc_type)
-          search_key = self.class.assign_where_key_for(klass, assoc_type)
-          vals = [v, self.pk].map{ |val| Ink::SqlAdapter.transform_to_sql(val) }
+          search_key = case assoc_type
+          when 'one_one'
+            self.class.order_table_names_for(klass).first.primary_key
+          when 'many_one'
+            klass.primary_key
+          when 'one_many'
+            self.class.primary_key
+          end
           if assoc_type == 'many_one'
             vals.reverse!
           end
           set_value, search_value = vals
 
-          p Ink::R.update(self.class.foreign_key_table_for(klass, assoc_type)).
+          Ink::R.update(self.class.foreign_key_table_for(klass, assoc_type)).
             set("`#{set_key}`=#{set_value}").
-            where("`#{search_key}`=#{search_value}").to_sql
+            where("`#{search_key}`=#{search_value}").execute
         else
-          foreign_keys = [self.class.foreign_key, klass.foreign_key].map do |f|
+          foreign_keys = [klass.foreign_key, self.class.foreign_key].map do |f|
             "`#{f}`"
-          end
-          vals = [self.pk, v].map do |val|
-            Ink::SqlAdapter.transform_to_sql(val)
           end
 
           Ink::R.insert.

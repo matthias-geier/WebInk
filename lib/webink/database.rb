@@ -231,6 +231,7 @@ module Ink
     # [param class_name:] Defines the class name or class
     # [param params:] Additional SQL syntax like WHERE conditions (optional)
     def remove(class_name, params="")
+      warn "deprecated #{self.class.name}#remove"
       @db.remove(class_name, params)
     end
 
@@ -242,6 +243,7 @@ module Ink
     # [param params:] Additional SQL syntax like WHERE conditions (optional)
     # [returns:] Array of class_name instances from the SQL result set
     def find(class_name, params="")
+      warn "deprecated #{self.class.name}#find"
       @db.find(class_name, params)
     end
 
@@ -256,6 +258,7 @@ module Ink
     # [param params:] Additional SQL syntax like GROUP BY (optional)
     # [returns:] Array of class2 instances from the SQL result set
     def find_union(class1, class1_id, class2, params="")
+      warn "deprecated #{self.class.name}#find_union"
       @db.find_union(class1, class1_id, class2, params)
     end
 
@@ -269,6 +272,7 @@ module Ink
     # [param params:] Additional SQL syntax like GROUP BY (optional)
     # [returns:] Array of class2 instances from the SQL result set
     def find_references(class1, class1_id, class2, params="")
+      warn "deprecated #{self.class.name}#find_references"
       @db.find_references(class1, class1_id, class2, params)
     end
 
@@ -283,6 +287,7 @@ module Ink
     # [param params:] Additional SQL syntax like GROUP BY (optional)
     # [returns:] single class2 instance from the SQL result set or nil
     def find_reference(class1, class1_id, class2, params="")
+      warn "deprecated #{self.class.name}#find_reference"
       @db.find_reference(class1, class1_id, class2, params)
     end
 
@@ -296,6 +301,7 @@ module Ink
     # [param link:] the related class (not a String, but class reference)
     # [param type:] relationship type
     def delete_all_links(instance, link, type)
+      warn "deprecated #{self.class.name}#delete_all_links"
       @db.delete_all_links(instance, link, type)
     end
 
@@ -312,6 +318,7 @@ module Ink
     # [param value:] relationship data that was set, either a primary key value,
     #                or an instance, or an array of both
     def create_all_links(instance, link, type, value)
+      warn "deprecated #{self.class.name}#create_all_links"
       @db.create_all_links(instance, link, type, value)
     end
 
@@ -327,6 +334,7 @@ module Ink
     # [param type:] relationship type
     # [param value:] primary key of the relationship, that is to be created
     def create_link(instance, link, type, fk)
+      warn "deprecated #{self.class.name}#create_link"
       @db.create_link(instance, link, type, fk)
     end
 
