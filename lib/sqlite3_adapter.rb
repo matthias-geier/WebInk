@@ -40,6 +40,12 @@ QUERY
       return result
     end
 
+    def transaction(commit=true, &blk)
+      @db.query("BEGIN TRANSACTION")
+      blk.call
+      @db.query(commit ? "COMMIT" : "ROLLBACK")
+    end
+
     def close
       return if @db.closed?
       begin

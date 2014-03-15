@@ -13,7 +13,6 @@ require './lib/sqlite3_adapter.rb'
 require './lib/webink/extensions/r.rb'
 require './lib/webink/extensions/string.rb'
 require 'minitest/autorun'
-require 'minitest/spec'
 
 config = {
   :db_type => "sqlite3",
@@ -47,8 +46,18 @@ begin
     end
   end
 
-  Dir.open("./").each do |t|
-    load "./#{t}" if t =~ /_test\.rb$/
+  describe Ink::Model do
+    before do
+      Ink::Database.database.query("BEGIN TRANSACTION")
+    end
+
+    after do
+      Ink::Database.database.query("ROLLBACK")
+    end
+
+    Dir.open("./").each do |t|
+      load "./#{t}" if t =~ /_test\.rb$/
+    end
   end
 rescue Exception => bang
   puts "SQLError: #{bang}."

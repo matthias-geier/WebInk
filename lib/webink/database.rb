@@ -339,6 +339,10 @@ module Ink
       @db_class.format_date(date)
     end
 
+    def transaction(commit=true, &blk)
+      @db.transaction(commit, &blk)
+    end
+
   end
 
 end

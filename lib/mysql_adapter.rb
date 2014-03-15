@@ -42,6 +42,12 @@ module Ink
       return result
     end
 
+    def transaction(commit=true, &blk)
+      @db.query("BEGIN TRANSACTION")
+      blk.call
+      @db.query(commit ? "COMMIT" : "ROLLBACK")
+    end
+
     def close
       @db.close
       @db = nil

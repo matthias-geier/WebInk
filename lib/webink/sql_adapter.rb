@@ -73,6 +73,10 @@ module Ink
       raise NotImplementedError.new('Override query')
     end
 
+    def transaction(commit=true, &blk)
+      raise NotImplementedError.new('Override transaction')
+    end
+
     # Abstract Instance method
     #
     # Closes the database connection, there is no way
@@ -89,8 +93,6 @@ module Ink
     def primary_key_autoincrement(pk="id")
       raise NotImplementedError.new('Override primary_key_autoincrement')
     end
-
-
 
     # Class method
     #
@@ -437,7 +439,6 @@ INSERT INTO #{union_class}
 QUERY
       end
     end
-
   end
 
 end
