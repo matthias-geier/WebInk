@@ -387,27 +387,6 @@ QUERY
       end
     end
 
-    # Instance method
-    #
-    # Queries the database for foreign keys and attaches them to the
-    # matching foreign accessor
-    # [param foreign_class:] Defines the foreign class name or class
-    def find_references(foreign_class)
-      c = (foreign_class.is_a? Class) ? foreign_class :
-        Ink::Model.classname(foreign_class)
-      relationship = self.class.foreign[c.class_name]
-      if relationship
-        result_array = (relationship == "many_many") ?
-          Ink::Database.database.find_union(self.class, self.pk, c) :
-          Ink::Database.database.find_references(self.class, self.pk, c)
-        instance_variable_set("@#{c.table_name}",
-          (relationship =~ /^one_/) ? result_array.first : result_array)
-        true
-      else
-        false
-      end
-    end
-
     # Class method
     #
     # This will create SQL statements for creating the
@@ -443,7 +422,7 @@ CREATE TABLE #{self.table_name}_#{Ink::Model::str_to_tablename(k)}
 QUERY
              nil
            end
-           if v == "many_one" or (v == "one_one" and (self.name <=> k) < 0)
+           if v == "one_many" or (v == "one_one" and (self.name <=> k) < 0)
              "`#{f_class.foreign_key}` #{f_class.foreign_key_type}"
            else
              nil
