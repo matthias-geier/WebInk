@@ -239,7 +239,7 @@ module Ink
     #
     # Provides an instance getter and setter for the key.
     # Primary keys receive an extra 'pk' getter and setter.
-    # [key:] String
+    # [param key:] String
     def init_field(key)
       if key.to_s.downcase == "pk"
         raise NameError.new(<<-ERR)
@@ -271,7 +271,7 @@ module Ink
     # Private instance method
     #
     # Map association contents to primary keys only
-    # [values:] Association data
+    # [param values:] Association data
     # [returns:] A mapped version of the association data
     def map_association_values_to_primary_keys(values)
       transform = lambda{ |v| v.is_a?(Ink::Model) ? v.pk : v }
@@ -287,7 +287,7 @@ module Ink
     # Transforms the key to snakecase and foreign_key of the associated
     # model. It then provides an instance getter and setter for both
     # accessing the same underlying instance variable.
-    # [key:] String
+    # [param key:] String
     def init_foreign(key)
       k = key.underscore
       klass = key.constantize

@@ -2,18 +2,37 @@
 module Ink
   module Associations
     module ClassMethods
+
+      # Public class method
+      #
+      # Orders the given class(-name) and self by table_name and
+      # returns a sorted array of both classes.
+      # [param klass:] Class or string
+      # [returns:] Ordered array of both classes
       def order_table_names_for(klass)
         klass = klass.to_s.constantize unless klass.is_a?(Ink::Model)
 
         return [self, klass].sort{ |a, b| a.table_name <=> b.table_name }
       end
 
+      # Public class method
+      #
+      # Generates a join table name for self and a given class(-name)
+      # [param klass:] Class or string
+      # [returns:] join table name string
       def join_table_for(klass)
         klass = klass.to_s.constantize unless klass.is_a?(Ink::Model)
 
         return [self.table_name, klass.table_name].sort.join('_')
       end
 
+      # Public class method
+      #
+      # Attempts to guess the table where the foreign key is located
+      # for an association.
+      # [param klass:] Class or string
+      # [param assoc_type:] Association type
+      # [returns:] table name
       def foreign_key_table_for(klass, assoc_type)
         klass = klass.to_s.constantize unless klass.is_a?(Ink::Model)
 
@@ -28,6 +47,13 @@ module Ink
         end
       end
 
+      # Public class method
+      #
+      # Attempts to guess which foreign key name must be updated
+      # when cleaning up or assigning associations.
+      # [param klass:] Class or string
+      # [param assoc_type:] Association type
+      # [returns:] foreign key name
       def update_key_for(klass, assoc_type)
         klass = klass.to_s.constantize unless klass.is_a?(Ink::Model)
 
@@ -40,6 +66,11 @@ module Ink
         end
       end
 
+      # Public class method
+      #
+      # Transforms the foreign key information into column and create
+      # table statements for creating the model table.
+      # [returns:] Array of create statements and foreign field columns
       def create_foreign_column_definitions
         return [[], []] unless self.respond_to?(:foreign)
 
