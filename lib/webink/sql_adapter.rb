@@ -127,6 +127,7 @@ module Ink
     # Transform a value from sql to objects.
     # This means nils, integer, floats and strings
     # are imported correctly.
+    # Escaped single quotes are transformed back.
     # [param value:] String
     # [returns:] Object
     def self.transform_from_sql(value)
@@ -137,7 +138,7 @@ module Ink
       elsif value =~ /^\d+\.\d+$/
         value.to_f
       else
-        value
+        value.gsub('&#39;', "'")
       end
     end
 
