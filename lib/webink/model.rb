@@ -7,54 +7,84 @@ module Ink
   # Models are usually derived from. So let's assume there is a
   # class called Apple < Ink::Model
   #
-  #   apple = Apple.new {:color => "red", :diameter => 4}
-  #   apple = Apple.new [ "red", 4 ]
+  #   apple = Apple.new(:color => "red", :diameter => 4, :tree_id => Tree.new)
+  #   # equals to
+  #   apple = Apple.new("red", 4)
+  #   apple.tree_id = Tree.new
   #
-  # The constructor checks, if there are class methods 'fields'
-  # and 'foreign' defined. If that check is positive, it will
-  # match the parameter Hash to the fields, that are set for
-  # the database, and throw an exception if fields is lacking
-  # an entry (excluded the primary key). The other case just
-  # creates an Apple with the Hash as instance variables.
-  # An alternate method of creating a new apple is by providing
-  # an Array of values in the same order as in the fields
-  # definition.
+  # The constructor initializes an object will accessors to all
+  # 'fields', to the primary key additionally with #pk and #pk=
+  # and finally to 'foreigns' with both the underscore representation
+  # of the associated class name and respectively with the added
+  # primary key.
   #
-  #   puts apple.color
+  #   apple.color
+  #   => "red"
   #
-  # This prints "red" to the stdout, since getter and setter
-  # methods are automatically added for either the Hash, or
-  # the fields and foreign keys.
+  # The constructor utilizes the update_fields method which provide
+  # a generic update interface for arrays and hashes.
+  # Hashes are set by assuming the 'key' is the method name and the
+  # assigned value is the future assigned value.
+  # Arrays are more complicated. It is assumed the array values are
+  # the same order as the 'fields', with or without the primary key,
+  # that is choosable. The array values are then matched against the
+  # 'fields' and treated as hash onwards.
   #
   #   apple.save
   #
   # You can save your apple by using the save method. New instances
-  # will create a new row in the database, and update its primary
-  # key. Old instances just update the fields. Relationships are set
-  # to nil by default and will not be touched while nil.
+  # will create a new row in the database, and update the object's
+  # primary key. Old instances just update the fields. Relationships
+  # are set to nil by default and will not be touched while nil.
   #
-  #   treeinstance.apple = [1,2,myapple]
-  #   treeinstance.save
+  #   tree = Tree.new
+  #   tree.apple = [1,2,apple]
+  #   tree.save
   #
   # To insert relationship data, you can provide them by array, value
-  # or reference, so setting treeinstance.apple to 1 is allowed, also
-  # to myapple, or an array or a combination. An empty array [] will
+  # or reference, so setting tree.apple to 1 is allowed, also
+  # to apple, or an array or a combination. An empty array [] will
   # remove all references. This works both ways, just consider the
   # relationship type, as an apple cannot have more than one tree.
+  # Should you add more trees on the apple, the last one counts.
   #
-  #   treeinstance.delete
+  #   tree.delete
   #
   # The model provides a convenience method for deletion. It removes all
-  # references from relationships, but does not remove the relationships
-  # themselves, so you must fetch all related data, and delete them by
-  # 'hand' if you will.
+  # references from relationships.
   #
-  #   treeinstance.find_references Apple
+  #   tree.find_references(Apple)
+  #   => [apple]
+  #   tree.apple
+  #   => [apple]
+  #   tree.apple_id
+  #   => [25]
+  #
+  #   apple.find_references(Tree)
+  #   => tree
+  #   apple.tree
+  #   => tree
+  #   apple.tree_ref
+  #   => 3
   #
   # This convenience method finds all apples for this tree and makes
-  # them available in the accessor. If the Tree-Apple relationship is
+  # them available in the accessors. If the Tree-Apple relationship is
   # a *_one, then there is only one object in the accessor, otherwise
   # an Array of objects.
+  #
+  # When calling the accessor with the primary key as suffix, it will
+  # attempt to map the objects to their primary keys.
+  #
+  #   Apple.find{ |s| s.where(Tree.foreign_key + ">=3") }
+  #   => [apple]
+  #   Apple.find
+  #   => [apple, ....]
+  #
+  # Model finders allow a quick way of fetching an array of objects
+  # which is filtered by the block given. The block takes an sql builder
+  # instance. The method itself generates an sql similar to:
+  #
+  #   SELECT * FROM apple
   #
   #
   # == Fields and foreign sample config
@@ -76,7 +106,6 @@ module Ink
   #     end
   #   end
   #
-  # Let's look at this construct.
   # The constructor is inherited from Ink::Model, so are its
   # methods. 'fields' defines a Hash of Arrays, that will
   # create the Database table for us.
@@ -103,22 +132,11 @@ module Ink
   # The foreign_key has a combination of "classname"_"primary_key"
   # (i.e. "apple_id")
   #
-  #   self.class_name
-  #
-  # Equivalent to class.name
-  #
   #   self.table_name
   #
   # Generates a table representation of the class. (Apple as
-  # "apple" and MyApple as "my_apple")
-  #
-  #   self.str_to_classname(str)
-  #
-  # Converts a table name to class name. This method takes a string.
-  #
-  #   self.str_to_tablename(str)
-  #
-  # Converts a class name to table name. This method takes a string.
+  # "apple" and MyApple as "my_apple"). Essentially equivalent to
+  # snakecase.
   #
   #
   #
@@ -217,24 +235,6 @@ module Ink
     end
     private :update_fields_data_to_hash
 
-    # Class method
-    #
-    # Similar to making an Object sql safe.
-    # Escapes quotes.
-    # [param value:] Object
-    # [returns:] safe Object
-    def self.make_safe(value)
-      if value.nil?
-        nil
-      elsif value.is_a?(String)
-        value.gsub(/'/, '&#39;')
-      elsif value.is_a?(Numeric)
-        value
-      else
-        "\'#{value}\'"
-      end
-    end
-
     # Private instance method
     #
     # Provides an instance getter and setter for the key.
@@ -254,7 +254,6 @@ module Ink
       end
       unless self.respond_to?("#{key}=")
         self.class.send(:define_method, "#{key}=") do |val|
-          val = self.class.make_safe(val)
           instance_variable_set("@#{key}", val)
         end
       end
@@ -263,12 +262,25 @@ module Ink
           instance_variable_get("@#{key}")
         end
         self.class.send(:define_method, "pk=") do |val|
-          val = self.class.make_safe(val)
           instance_variable_set("@#{key}", val)
         end
       end
     end
     private :init_field
+
+    # Private instance method
+    #
+    # Map association contents to primary keys only
+    # [values:] Association data
+    # [returns:] A mapped version of the association data
+    def map_association_values_to_primary_keys(values)
+      transform = lambda{ |v| v.is_a?(Ink::Model) ? v.pk : v }
+      if values.is_a?(Array)
+        values.map!{ |v| transform(v) }
+      else
+        transform(values)
+      end
+    end
 
     # Private instance method
     #
@@ -286,7 +298,8 @@ module Ink
         instance_variable_set("@#{k}", val)
       end
       self.class.send(:define_method, klass.foreign_key) do
-        instance_variable_get("@#{k}")
+        values = instance_variable_get("@#{k}")
+        self.map_association_values_to_primary_keys(values)
       end
       self.class.send(:define_method, "#{klass.foreign_key}=") do |val|
         instance_variable_set("@#{k}", val)
@@ -294,11 +307,13 @@ module Ink
     end
     private :init_foreign
 
-    # Instance method
+    # Public instance method
     #
     # Save the instance to the database. Set all foreign sets to
     # nil if you do not want to change them. Old references are
-    # automatically removed.
+    # automatically removed if the set value is not nil. To clean up
+    # associations, set the value to empty array.
+    # Values are automatically escaped.
     def save
       unless self.class.respond_to?(:fields)
         raise NotImplementedError.
@@ -332,6 +347,10 @@ module Ink
       self.assign_associations
     end
 
+    # Protected instance method
+    #
+    # Clean up all associations that are not nil (empty array works
+    # as a cleanup indicator)
     def clear_associations
       return unless self.class.respond_to?(:foreign)
 
@@ -339,8 +358,12 @@ module Ink
         self.delete_all_associations(k, v)
       end
     end
-    private :clear_associations
+    protected :clear_associations
 
+    # Protected instance method
+    #
+    # Assign all not-nil association values which can be objects or
+    # primary key values.
     def assign_associations
       return unless self.class.respond_to?(:foreign)
 
@@ -349,13 +372,14 @@ module Ink
         self.assign_all_associations(klass, v, self.send(k.underscore))
       end
     end
-    private :assign_associations
+    protected :assign_associations
 
     # Instance method
     #
     # Deletes the data from the database, essentially making the instance
     # obsolete. Disregard from using the instance anymore.
     # All links between models will be removed also.
+    # Saving the model again will recreate it with a new primary key.
     def delete
       unless self.class.respond_to?(:fields)
         raise NotImplementedError.
@@ -407,76 +431,10 @@ module Ink
 
     # Class method
     #
-    # This will retrieve a string-representation of the model name
-    # [returns:] valid classname
-    def self.class_name
-      warn "deprecated #{self.name}#class_name"
-      self.name
-    end
-
-    # Class method
-    #
     # This will retrieve a tablename-representation of the model name
     # [returns:] valid tablename
     def self.table_name
       self.name.underscore
-    end
-
-    # Class method
-    #
-    # This will check the parent module for existing classnames
-    # that match the input of the str parameter.
-    # [param str:] some string
-    # [returns:] valid classname or nil
-    def self.str_to_classname(str)
-      warn "deprecated #{self.name}#str_to_classname"
-      res = []
-      str.scan(/((^|_)([a-z0-9]+))/) { |s|
-        if s.length > 0
-          res.push(s[2][0].upcase +
-            ((s[2].length > 1) ? s[2][1,s[2].length] : ""))
-        end
-      }
-      Module.const_get(res.join).is_a?(Class) ? res.join : nil
-    end
-
-    # Class method
-    #
-    # This will check the parent module for existing classnames
-    # that match the input of the str parameter. Once found, it
-    # converts the string into the matching tablename.
-    # [param str:] some string
-    # [returns:] valid tablename or nil
-    def self.str_to_tablename(str)
-      warn "deprecated #{self.name}#str_to_tablename"
-      res = []
-      str.scan(/([A-Z][a-z0-9]*)/) { |s|
-        res.push (res.length>0) ? "_" + s.join.downcase : s.join.downcase
-      }
-      Module.const_get(str).is_a?(Class) ? res.join : nil
-    end
-
-    # Class method
-    #
-    # This will check the parent module for existing classnames
-    # that match the input of the str parameter. Once found, it
-    # returns the class, not the string of the class.
-    # [param str:] some string
-    # [returns:] valid class or nil
-    def self.classname(str)
-      warn "deprecated #{self.name}#classname"
-      res = []
-      if str[0] =~ /^[a-z]/
-        str.scan(/((^|_)([a-z0-9]+))/) { |s|
-          if s.length > 0
-            res.push(s[2][0].upcase +
-              ((s[2].length > 1) ? s[2][1,s[2].length] : ""))
-          end
-        }
-      else
-        res.push str
-      end
-      Module.const_get(res.join).is_a?(Class) ? Module.const_get(res.join) : nil
     end
 
     # Class method
