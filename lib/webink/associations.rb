@@ -69,11 +69,14 @@ module Ink
 
     end
 
-    # Instance method
+    # Public instance method
     #
     # Queries the database for foreign keys and attaches them to the
     # matching foreign accessor
     # [param foreign_class:] Defines the foreign class name or class
+    # [yield(Ink::R::RelationString instance):] yield a block with one argument
+    #   that is attached by AND to the query
+    # [returns:] Array of found objects or one object for /^one_/ associations
     def find_references(klass)
       klass = klass.to_s.constantize unless klass.is_a?(Ink::Model)
       if !self.class.respond_to?(:foreign) || !self.class.foreign[klass.name]
@@ -120,6 +123,7 @@ module Ink
     def delete_all_associations(klass, assoc_type)
       return if self.pk.nil?
       klass = klass.to_s.constantize unless klass.is_a?(Ink::Model)
+      return if self.send(klass.name.underscore).nil?
 
       if ['one_one', 'one_many', 'many_one'].include?(assoc_type)
         where_key = case assoc_type
@@ -140,6 +144,7 @@ module Ink
           where("`#{self.class.foreign_key}`=#{self.pk}").execute
       end
     end
+    protected :delete_all_associations
 
     def assign_all_associations(klass, assoc_type, value)
       return if self.pk.nil?
@@ -180,5 +185,6 @@ module Ink
         end
       end
     end
+    protected :assign_all_associations
   end
 end
