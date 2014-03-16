@@ -40,6 +40,33 @@ module Ink
         end
       end
 
+      def create_foreign_column_definitions
+        return [[], []] unless self.respond_to?(:foreign)
+
+        tables = []
+        foreign_fields = self.foreign.reduce([]) do |acc, (k, v)|
+          klass = k.constantize
+
+          if v == 'many_many' && self.order_table_names_for(k).first == self
+            tables << Ink::R.create.table(self.join_table_for(k))._! do |s|
+              cols = []
+              cols << Ink::Database.database.primary_key_autoincrement.join(' ')
+              cols += [self, klass].map do |elem|
+                "`#{elem.foreign_key}` #{elem.foreign_key_type}"
+              end
+              next cols.join(',')
+            end.to_sql
+          elsif v == 'one_many' ||
+            (v == 'one_one' && self.order_table_names_for(k).first == self)
+
+            acc << "`#{klass.foreign_key}` #{klass.foreign_key_type}"
+          end
+          next acc
+        end
+
+        return [tables, foreign_fields]
+      end
+
     end
 
     # Instance method
@@ -55,10 +82,6 @@ module Ink
       assoc_type = self.class.foreign[klass.name]
 
       result = klass.find do |s|
-        if block_given?
-          s.send(' !'){ |sub| yield(sub) }
-        end
-
         s.where("`#{klass.primary_key}`").in! do |sub|
           select_key, where_key = case assoc_type
           when 'many_many'
@@ -78,6 +101,12 @@ module Ink
             from(self.class.foreign_key_table_for(klass, assoc_type)).
             where("`#{where_key}`=#{Ink::SqlAdapter.transform_to_sql(self.pk)}")
         end
+
+        if block_given?
+          s.and!{ |sub| yield(sub) }
+        end
+
+        next s
       end
 
       if assoc_type.match(/^one_/)

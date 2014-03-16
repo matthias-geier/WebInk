@@ -339,6 +339,7 @@ module Ink
         self.delete_all_associations(k, v)
       end
     end
+    private :clear_associations
 
     def assign_associations
       return unless self.class.respond_to?(:foreign)
@@ -348,6 +349,7 @@ module Ink
         self.assign_all_associations(klass, v, self.send(k.underscore))
       end
     end
+    private :assign_associations
 
     # Instance method
     #
@@ -380,45 +382,27 @@ module Ink
     # this, and 'foreign' is optional.
     # [returns:] Array of SQL statements
     def self.create
-      result = Array.new
-      if not self.respond_to?(:fields)
+      unless self.respond_to?(:fields)
         puts "Skipping #{self.name}...."
         return []
       end
 
-      string = "CREATE TABLE #{self.table_name} ("
-      mfk = self.foreign_key
-      string += self.fields.map do |k,v|
-        if k != self.primary_key
-          "`#{k}` #{v*" "}"
-        else
-          "#{Ink::Database.database.primary_key_autoincrement(k)*" "}"
-        end
-      end.join(",")
+      tables, foreign_fields = self.create_foreign_column_definitions
 
-      if self.respond_to? :foreign
-         tmp = self.foreign.map do |k,v|
-           f_class = Ink::Model::classname(k)
-           if v == "many_many" and (self.name <=> k) < 0
-             result.push <<QUERY
-CREATE TABLE #{self.table_name}_#{Ink::Model::str_to_tablename(k)}
-(#{Ink::Database.database.primary_key_autoincrement*" "},
-`#{self.foreign_key}` #{self.foreign_key_type},
-`#{f_class.foreign_key}` #{f_class.foreign_key_type});
-QUERY
-             nil
-           end
-           if v == "one_many" or (v == "one_one" and (self.name <=> k) < 0)
-             "`#{f_class.foreign_key}` #{f_class.foreign_key_type}"
-           else
-             nil
-           end
-         end.compact.join(",")
-         string += ",#{tmp}" if not tmp.empty?
+      sql = Ink::R.create.table(self.table_name)._! do |_|
+        cols = self.fields.map do |k, v|
+          if k == self.primary_key
+            Ink::Database.database.primary_key_autoincrement(k).join(' ')
+          else
+            "`#{k}` #{v.join(' ')}"
+          end
+        end
+        cols += foreign_fields
+        cols.join(',')
       end
-      string += ");"
-      result.push string
-      result
+
+      tables << sql.to_sql
+      return tables
     end
 
     # Class method

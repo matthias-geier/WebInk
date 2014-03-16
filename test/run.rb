@@ -25,7 +25,7 @@ require "#{config[:db_type]}"
 
 model_classes = Dir.open("./models").reduce([]) do |acc, model|
   load "./models/#{model}" if model =~ /\.rb$/
-  acc << Ink::Model.classname($1) if model =~ /^(.*)\.rb$/
+  acc << $1.camelize.constantize if model =~ /^(.*)\.rb$/
   acc
 end
 
