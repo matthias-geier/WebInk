@@ -37,7 +37,7 @@ module Ink
         klass = klass.to_s.constantize unless klass.is_a?(Ink::Model)
 
         if assoc_type == 'one_one'
-          return self.order_table_names_for(klass).table_name.first
+          return self.order_table_names_for(klass).first.table_name
         elsif assoc_type == 'one_many'
           return self.table_name
         elsif assoc_type == 'many_one'
@@ -125,7 +125,7 @@ module Ink
           when 'many_one'
             [klass.primary_key, self.class.foreign_key]
           when 'one_one'
-            if self.class.order_table_names_for(klass).first == self
+            if self.class.order_table_names_for(klass).first == self.class
               [klass.foreign_key, self.class.primary_key]
             else
               [klass.primary_key, self.class.foreign_key]
@@ -163,8 +163,8 @@ module Ink
         when 'one_many'
           self.class.primary_key
         when 'one_one'
-          self.class.order_table_names_for(klass).first == self ?
-            self.class.primary_key : self.class.foreign_key
+          self.class.order_table_names_for(klass).first == self.class ?
+            self.class.primary_key : klass.primary_key
         end
 
         Ink::R.update(self.class.foreign_key_table_for(klass, assoc_type)).

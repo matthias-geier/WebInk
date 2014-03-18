@@ -9,6 +9,7 @@ class Wig < Ink::Model
   def self.foreign
     {
       "AppleTree" => "one_many",
+      "ColorSpray" => "one_one",
     }
   end
 end

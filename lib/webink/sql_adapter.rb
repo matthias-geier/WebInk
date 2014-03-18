@@ -144,8 +144,10 @@ module Ink
         value.to_i
       elsif value =~ /^\d+\.\d+$/
         value.to_f
-      else
+      elsif value.is_a?(String)
         value.gsub('&#39;', "'")
+      else
+        value
       end
     end
 

@@ -276,9 +276,9 @@ module Ink
     def map_association_values_to_primary_keys(values)
       transform = lambda{ |v| v.is_a?(Ink::Model) ? v.pk : v }
       if values.is_a?(Array)
-        values.map!{ |v| transform(v) }
+        values.map{ |v| transform.call(v) }
       else
-        transform(values)
+        transform.call(values)
       end
     end
 
@@ -393,8 +393,11 @@ module Ink
     end
 
     def self.find
-      return [] unless block_given?
-      return yield(Ink::R.select('*').from(self.table_name)).to_a.map do |row|
+      query = Ink::R.select('*').from(self.table_name)
+      if block_given?
+        query = yield(query)
+      end
+      return query.to_a.map do |row|
         self.new(row)
       end
     end

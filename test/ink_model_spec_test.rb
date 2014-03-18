@@ -70,7 +70,7 @@ describe Ink::Model do
     end
 
     it "should set foreign keys for both accessors" do
-      @a.update_fields(:wig => 15, :color_spray_ref => [17])
+      @a.update_fields(:wig => 15, :color_spray_gnu => [17])
       assert 15, @a.wig_ref
       assert [17], @a.color_spray
     end
@@ -99,83 +99,6 @@ describe Ink::Model do
     end
   end
 
-  describe "saved tree" do
-    before do
-      @apple_tree = AppleTree.new(:color => "yellow")
-      @apple_tree.save
-      @wig = Wig.new("length" => 15)
-      @wig.apple_tree = @apple_tree
-      @wig.save
-      @green_tree = AppleTree.new("green", "comment", 6)
-      @green_tree.save
-      @spray = ColorSpray.new("color" => "blue")
-      @spray.apple_tree = [@apple_tree]
-      @spray.save
-    end
-
-    after do
-      @green_tree.delete
-      @green_tree = nil
-      @spray.delete
-      @spray = nil
-      @wig.delete
-      @wig = nil
-      @apple_tree.delete
-      @apple_tree = nil
-    end
-
-    describe "one_many relationships" do
-      before do
-        @wig.apple_tree = nil
-        @apple_tree.wig = nil
-      end
-
-      it "should find the wig as reference on the tree" do
-        @apple_tree.find_references(Wig)
-        assert_equal @wig.pk, @apple_tree.wig.first.pk
-      end
-
-      it "should find the tree as a single reference on the wig" do
-        @wig.find_references(AppleTree)
-        assert_equal @apple_tree.pk, @wig.apple_tree.pk
-      end
-
-      it "should unset the wig when emptying the assoc on the tree" do
-        @apple_tree.wig = []
-        @apple_tree.save
-        @wig.find_references(AppleTree)
-        assert_nil @wig.apple_tree
-        @wig.apple_tree = @apple_tree
-        @wig.save
-      end
-    end
-
-    describe "many_many relationships" do
-      before do
-        @apple_tree.color_spray = nil
-        @spray.apple_tree = nil
-      end
-
-      it "should find the spray as reference on the tree" do
-        @apple_tree.find_references(ColorSpray)
-        assert_equal @spray.pk, @apple_tree.color_spray.first.pk
-      end
-
-      it "should find the tree as reference on the spray" do
-        @spray.find_references(AppleTree)
-        assert_equal @apple_tree.pk, @spray.apple_tree.first.pk
-      end
-
-      it "should find both trees when assigned" do
-        @green_tree.color_spray = [@spray]
-        @green_tree.save
-        @spray.find_references(AppleTree)
-        assert @spray.apple_tree.map(&:pk).include?(@green_tree.pk)
-        assert @spray.apple_tree.map(&:pk).include?(@apple_tree.pk)
-      end
-    end
-  end
-
   describe "static declarations" do
     it "should own the proper foreign keys" do
       assert_equal "INTEGER", AppleTree.foreign_key_type
@@ -199,6 +122,32 @@ describe Ink::Model do
       w.save
       assert_equal 1, Ink::Database.database.last_inserted_pk(Wig)
       w.delete
+    end
+  end
+
+  describe "find instances" do
+    before do
+      @wig1 = Wig.new(25)
+      @wig1.save
+      @wig2 = Wig.new(26)
+      @wig2.save
+    end
+
+    after do
+      @wig1.delete
+      @wig2.delete
+      @wig1 = @wig2 = nil
+    end
+
+    it "should find both wigs when just calling find" do
+      wigs = Wig.find.map(&:pk)
+      assert wigs.include?(@wig1.pk)
+      assert wigs.include?(@wig2.pk)
+    end
+
+    it "should find only one wig when find is filtered" do
+      wig = Wig.find{ |s| s.where('length=25') }.first
+      assert_equal @wig1.pk, wig.pk
     end
   end
 end

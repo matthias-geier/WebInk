@@ -2,12 +2,13 @@ class ColorSpray < Ink::Model
   def self.fields
     {
       :color => [ "VARCHAR(255)", "NOT NULL" ],
-      :ref => "PRIMARY KEY",
+      :gnu => "PRIMARY KEY",
     }
   end
   def self.foreign
     {
       "AppleTree" => "many_many",
+      "Wig" => "one_one",
     }
   end
 end
