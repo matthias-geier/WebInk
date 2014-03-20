@@ -4,6 +4,10 @@ describe Ink::Model do
     before do
       @apple_tree = AppleTree.new(:color => "yellow")
       @apple_tree.save
+      tmp1 = Wig.new("length" => 16)
+      tmp1.save
+      tmp2 = Wig.new("length" => 17)
+      tmp2.save
       @wig = Wig.new("length" => 15)
       @wig.apple_tree = @apple_tree
       @wig.save
@@ -30,6 +34,17 @@ describe Ink::Model do
       before do
         @wig.color_spray = nil
         @spray.wig = nil
+      end
+
+      it "should assign from opposite side too" do
+        @spray.wig = []
+        @spray.save
+        @wig.color_spray = @spray
+        @wig.save
+        @spray.find_references(Wig){ |s| s._("ref=#{@wig.pk}") }
+        assert @wig.pk, @spray.wig.pk
+        @wig.color_spray = []
+        @wig.save
       end
 
       it "should find the wig as reference on the spray" do

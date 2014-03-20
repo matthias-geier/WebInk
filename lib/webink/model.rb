@@ -141,8 +141,6 @@ module Ink
   #
   #
   class Model
-    include Associations
-    extend Associations::ClassMethods
 
     # Constructor
     #
@@ -167,9 +165,28 @@ module Ink
 
       if self.class.respond_to?(:foreign)
         self.class.foreign.keys.each{ |k| init_foreign(k) }
+        self.class.init_associations
       end
 
-      update_fields(*data)
+      self.update_fields(*data)
+    end
+
+    def self.associations
+      unless @associations
+        self.init_associations
+      end
+      return @associations
+    end
+
+    def self.init_associations
+      @associations = {}
+      return if !self.respond_to?(:foreign)
+
+      self.foreign.each do |k, v|
+        assoc = "Ink::Association::#{v.camelize}".constantize
+        klass = k.constantize
+        @associations[klass] = assoc.new(self, klass)
+      end
     end
 
     # Public instance method
@@ -354,8 +371,11 @@ module Ink
     def clear_associations
       return unless self.class.respond_to?(:foreign)
 
-      self.class.foreign.each do |k, v|
-        self.delete_all_associations(k, v)
+      self.class.associations.each do |k, v|
+        value = self.send(k.name.underscore)
+        next if self.pk.nil?
+
+        v.delete_all_associations(self.pk)
       end
     end
     protected :clear_associations
@@ -367,9 +387,11 @@ module Ink
     def assign_associations
       return unless self.class.respond_to?(:foreign)
 
-      self.class.foreign.each do |k, v|
-        klass = k.constantize
-        self.assign_all_associations(klass, v, self.send(k.underscore))
+      self.class.associations.each do |k, v|
+        value = self.send(k.name.underscore)
+        next if self.pk.nil?
+
+        v.assign_all_associations(self.pk, value)
       end
     end
     protected :assign_associations
@@ -402,6 +424,26 @@ module Ink
       end
     end
 
+    # Public instance method
+    #
+    # Queries the database for foreign keys and attaches them to the
+    # matching foreign accessor
+    # [param foreign_class:] Defines the foreign class name or class
+    # [yield(Ink::R::RelationString instance):] yield a block with one argument
+    #   that is attached by AND to the query
+    # [returns:] Array of found objects or one object for /^one_/ associations
+    def find_references(klass, &blk)
+      klass = klass.to_s.constantize unless klass.is_a?(Ink::Model)
+      if !self.class.respond_to?(:foreign) || !self.class.associations[klass]
+        return nil
+      end
+
+      result = self.class.associations[klass].find_references(self.pk, &blk)
+
+      self.send("#{klass.name.underscore}=", result)
+      return result
+    end
+
     # Class method
     #
     # This will create SQL statements for creating the
@@ -414,7 +456,13 @@ module Ink
         return []
       end
 
-      tables, foreign_fields = self.create_foreign_column_definitions
+      tables, foreign_fields = self.associations.
+        reduce([[], []]) do |acc, (_, v)|
+
+        acc[0] += v.tables_for_create
+        acc[1] += v.foreign_fields_for_create
+        acc
+      end
 
       sql = Ink::R.create.table(self.table_name)._! do |_|
         cols = self.fields.map do |k, v|
