@@ -209,7 +209,10 @@ module Ink
         end
       end
 
-      data.each{ |k, v| self.send("#{k}=", v) }
+      data.each do |k, v|
+        next unless self.respond_to?("#{k}=")
+        self.send("#{k}=", v)
+      end
     end
 
     # Private instance method
@@ -228,6 +231,7 @@ module Ink
             Model cannot be loaded, wrong number or arguments for Array:
             #{data.length} expected #{self.class.fields.length}
             or #{self.class.fields.length - 1}
+            with content #{data.inspect} for #{self.class.fields.keys.inspect}
           ERR
         end
       end
@@ -373,7 +377,7 @@ module Ink
 
       self.class.associations.each do |k, v|
         value = self.send(k.name.underscore)
-        next if self.pk.nil?
+        next if self.pk.nil? || value.nil?
 
         v.delete_all_associations(self.pk)
       end
@@ -419,7 +423,7 @@ module Ink
       if block_given?
         query = yield(query)
       end
-      return query.to_a.map do |row|
+      return query.to_h.map do |row|
         self.new(row)
       end
     end

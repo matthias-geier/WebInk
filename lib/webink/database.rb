@@ -166,8 +166,8 @@ module Ink
     # and retrieve a result set
     # [param query:] SQL query string
     # [returns:] Array of Hashes of column_name => column_entry
-    def query(query, type=Hash)
-      @db.query(query, type)
+    def query(query, type=Hash, &blk)
+      @db.query(query, type, &blk)
     end
 
     # Instance method

@@ -33,7 +33,7 @@
 #
 class String
   def constantize
-    return Module.const_get(self.to_s)
+    return self.to_s.split('::').reduce(Module){ |m, c| m.const_get(c) }
   end
 
   def camelize

@@ -41,7 +41,7 @@ describe Ink::Model do
         @spray.save
         @wig.color_spray = @spray
         @wig.save
-        @spray.find_references(Wig){ |s| s._("ref=#{@wig.pk}") }
+        @spray.find_references(Wig){ |s| s.and!("ref=#{@wig.pk}") }
         assert @wig.pk, @spray.wig.pk
         @wig.color_spray = []
         @wig.save

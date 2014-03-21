@@ -20,8 +20,8 @@ module Ink
       return result
     end
 
-    def query(query, type=Hash)
-      type = Hash if not block_given?
+    def query(query, type=Hash, &blk)
+      type = Hash unless block_given?
       result = Array.new
       re = @db.method("query").call query
       if re

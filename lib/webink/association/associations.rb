@@ -68,7 +68,7 @@ module Ink
           end
 
           if block_given?
-            s.and!{ |sub| blk.call(sub) }
+            blk.call(s)
           end
 
           next s
