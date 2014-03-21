@@ -95,7 +95,7 @@ module Ink
     def initialize(config)
       klass = Ink.const_get("#{config[:db_type].capitalize}Adapter")
       if klass.is_a?(Class)
-        @db_class = klass
+        @@db_class = klass
         @db = klass.new(config)
       else
         raise ArgumentError.new("Database undefined.")
@@ -146,7 +146,7 @@ module Ink
     # [param value:] Object
     # [returns:] transformed String
     def self.transform_to_sql(value)
-      @db_class.transform_to_sql(value)
+      @@db_class.transform_to_sql(value)
     end
 
     # Class method
@@ -157,7 +157,7 @@ module Ink
     # [param value:] String
     # [returns:] Object
     def self.transform_from_sql(value)
-      @db_class.transform_from_sql(value)
+      @@db_class.transform_from_sql(value)
     end
 
     # Instance method
@@ -213,7 +213,7 @@ module Ink
     # [param date:] Time object
     # [returns:] Formatted string
     def self.format_date(date)
-      @db_class.format_date(date)
+      @@db_class.format_date(date)
     end
 
   end

@@ -1,9 +1,9 @@
 #!/usr/bin/env ruby
 
+require 'webink/r'
 require 'webink'
 
 config = nil
-model_classes = Array.new
 
 begin
   config = Ink::Beauty.new.load_config
@@ -12,11 +12,12 @@ rescue Exception => bang
 end
 
 require "#{config[:db_type]}"
+require "#{config[:db_type]}_adapter"
 
-models = Dir.new "./models"
-models.each do |model|
-  load "#{models.path}/#{model}" if model =~ /\.rb$/
-  model_classes << Ink::Model.classname($1) if model =~ /^(.*)\.rb$/
+model_classes = Dir.open("./models").reduce([]) do |acc, model|
+  load "./models/#{model}" if model =~ /\.rb$/
+  acc << $1.camelize.constantize if model =~ /^(.*)\.rb$/
+  acc
 end
 
 begin
