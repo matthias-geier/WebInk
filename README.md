@@ -148,3 +148,8 @@ cloning the github repos, navigating into the repos root folder and running
 
 WebInk can be unit tested quite easily, it only requires the minitest and
 sqlite3 gems apart from webink and webink_r.
+
+## Demo
+
+A blog demo software is available on github:
+https://github.com/matthias-geier/WebInk-demo
