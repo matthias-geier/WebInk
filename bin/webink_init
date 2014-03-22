@@ -16,11 +16,19 @@ Ink::Beauty.config = {
   :db_server => "./db.sqlite",
 
   #mysql config
-  #:db_type => "mysql"
-  #:db_user => "db_username"
-  #:db_pass => "db_password"
-  #:db_database => "db_database_name"
-  #:db_server => "localhost"
+  #:db_type => "mysql",
+  #:db_user => "db_username",
+  #:db_pass => "db_password",
+  #:db_database => "db_database_name",
+  #:db_server => "localhost",
+
+  #postgresql config
+  #:db_type => "pg",
+  #:db_database => "db_database_name",
+  #:db_user => "db_username",
+  #:db_pass => "db_password",
+  #:db_port => "5432",
+  #:db_server => "localhost",
 }
 CFG_RB
 

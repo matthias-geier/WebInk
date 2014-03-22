@@ -1,33 +1,26 @@
 module Ink
 
-  class MysqlAdapter
+  class PgAdapter < SqlAdapter
 
     def initialize(config)
       @type = config[:db_type]
-      @db = Mysql.real_connect(config[:db_server],config[:db_user],
-        config[:db_pass],config[:db_database])
-      @db.reconnect = true
+      @db = PG.connect(config[:db_server], config[:db_port], nil, nil,
+        config[:db_database], config[:db_user], config[:db_pass])
     end
 
     def tables
-      result = Array.new
-      re = @db.query "show tables;"
-      re.each do |row|
-        row.each do |t|
-          result.push t
-        end
-      end
-      return result
+      return @db.exec("SELECT table_name FROM information_schema.tables " +
+        "WHERE table_schema = 'public'").values.map(&:first)
     end
 
     def query(query, type=Hash, &blk)
       type = Hash unless block_given?
-      result = Array.new
-      re = @db.method("query").call query
+      result = []
+      re = @db.exec(query)
       if re
-        keys = re.fetch_fields.map(&:name)
-        re.each do |row|
-          result.push type.new
+        keys = re.fields
+        re.each_row do |row|
+          result.push(type.new)
           row.each_index do |i|
             k = keys[i]
             v = self.class.transform_from_sql(row[i])
@@ -53,10 +46,9 @@ module Ink
       @db = nil
     end
 
-    def primary_key_autoincrement(pk="id")
-      [pk, "INTEGER", "PRIMARY KEY", "AUTO_INCREMENT"]
+    def primary_key_autoincrement(pk='id')
+      return [pk, "SERIAL", "PRIMARY KEY"]
     end
 
   end
-
 end

@@ -17,7 +17,7 @@ module Ink
           cols = []
           cols << Ink::Database.database.primary_key_autoincrement.join(' ')
           cols += self.ordered_tables.map do |klass|
-            "`#{klass.foreign_key}` #{klass.foreign_key_type}"
+            "#{klass.foreign_key} #{klass.foreign_key_type}"
           end
           next cols.join(',')
         end.to_sql
@@ -31,7 +31,7 @@ module Ink
 
       def delete_all_associations(pk)
         Ink::R.delete.from(self.foreign_key_table).
-          where("`#{@klass.foreign_key}`=#{pk}").execute
+          where("#{@klass.foreign_key}=#{pk}").execute
       end
 
       def assign_all_associations(pk, value)
@@ -40,8 +40,7 @@ module Ink
           next if v.nil?
 
           vals = [v, pk].map{ |val| Ink::SqlAdapter.transform_to_sql(val) }
-          foreign_keys = [@related_klass.foreign_key, @klass.foreign_key].
-            map{ |f| "`#{f}`" }
+          foreign_keys = [@related_klass.foreign_key, @klass.foreign_key]
 
           Ink::R.insert.into(self.foreign_key_table).
             _!(foreign_keys.join(',')).values._!(vals.join(',')).execute

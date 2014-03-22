@@ -16,8 +16,8 @@ module Ink
 
       def delete_all_associations(pk)
         Ink::R.update(self.foreign_key_table).
-          set("`#{self.update_key}`=NULL").
-          where("`#{@klass.foreign_key}`=#{pk}").execute
+          set("#{self.update_key}=NULL").
+          where("#{@klass.foreign_key}=#{pk}").execute
       end
 
       def assign_all_associations(pk, value)
@@ -28,8 +28,8 @@ module Ink
           v, pk = [v, pk].map{ |val| Ink::SqlAdapter.transform_to_sql(val) }
 
           Ink::R.update(self.foreign_key_table).
-            set("`#{self.update_key}`=#{pk}").
-            where("`#{@related_klass.primary_key}`=#{v}").execute
+            set("#{self.update_key}=#{pk}").
+            where("#{@related_klass.primary_key}=#{v}").execute
         end
       end
     end

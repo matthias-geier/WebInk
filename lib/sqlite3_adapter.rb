@@ -56,7 +56,7 @@ QUERY
     end
 
     def primary_key_autoincrement(pk="id")
-      ["`#{pk}`", "INTEGER", "PRIMARY KEY", "ASC"]
+      [pk, "INTEGER", "PRIMARY KEY", "ASC"]
     end
 
   end

@@ -13,7 +13,7 @@ module Ink
       def foreign_fields_for_create
         return [] unless self.ordered_tables.first == @klass
 
-        return ["`#{@related_klass.foreign_key}` " +
+        return ["#{@related_klass.foreign_key} " +
           "#{@related_klass.foreign_key_type}"]
       end
 
@@ -30,8 +30,8 @@ module Ink
         where_key = self.ordered_tables.first == @klass ? @klass.primary_key :
           @related_klass.primary_key
         Ink::R.update(self.foreign_key_table).
-          set("`#{self.update_key}`=NULL").
-          where("`#{where_key}`=#{pk}").execute
+          set("#{self.update_key}=NULL").
+          where("#{where_key}=#{pk}").execute
       end
 
       def assign_all_associations(pk, value)
@@ -45,8 +45,8 @@ module Ink
           end
 
           Ink::R.update(self.foreign_key_table).
-            set("`#{self.update_key}`=#{v}").
-            where("`#{self.ordered_tables.first.primary_key}`=#{pk}").execute
+            set("#{self.update_key}=#{v}").
+            where("#{self.ordered_tables.first.primary_key}=#{pk}").execute
         end
       end
     end

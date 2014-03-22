@@ -343,13 +343,13 @@ module Ink
 
       column_value_map = self.class.fields.keys.reduce({}) do |acc, k|
         v = Ink::SqlAdapter.transform_to_sql(self.send(k))
-        acc["`#{k}`"] = v unless k == self.class.primary_key
+        acc[k] = v unless k == self.class.primary_key
         acc
       end
 
       query = Ink::R::RelationString.new
       if self.pk.nil? || self.class.find{ |s|
-        s.where("`#{self.class.primary_key}`=" +
+        s.where("#{self.class.primary_key}=" +
         "#{Ink::SqlAdapter.transform_to_sql(self.pk)}") }.empty?
 
         query.insert.into(self.class.table_name).
@@ -360,7 +360,7 @@ module Ink
       else
         query.update(self.class.table_name).
           set(column_value_map.map{ |k, v| "#{k}=#{v}" }.join(',')).
-          where("`#{self.class.primary_key}`=" +
+          where("#{self.class.primary_key}=" +
           "#{Ink::SqlAdapter.transform_to_sql(self.pk)}").execute
       end
 
@@ -415,7 +415,7 @@ module Ink
 
       pk_value = Ink::SqlAdapter.transform_to_sql(self.pk)
       Ink::R.delete.from(self.class.table_name).
-        where("`#{self.class.primary_key}`=#{pk_value}").execute
+        where("#{self.class.primary_key}=#{pk_value}").execute
     end
 
     def self.find
@@ -473,7 +473,7 @@ module Ink
           if k == self.primary_key
             Ink::Database.database.primary_key_autoincrement(k).join(' ')
           else
-            "`#{k}` #{v.join(' ')}"
+            "#{k} #{v.join(' ')}"
           end
         end
         cols += foreign_fields
