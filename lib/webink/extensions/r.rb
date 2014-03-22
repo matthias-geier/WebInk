@@ -31,16 +31,16 @@ module Ink
     #
     #
     class RelationString
-      def execute(connection=Ink::Database.database, as=Hash, &blk)
+      def execute(as=Hash, connection=Ink::Database.database, &blk)
         connection.query(self.to_sql, as, &blk)
       end
 
       def to_a(connection=Ink::Database.database)
-        self.execute(connection, Array){ |itm, k, v| itm << v }
+        self.execute(Array, connection){ |itm, k, v| itm << v }
       end
 
       def to_h(connection=Ink::Database.database)
-        self.execute(connection)
+        self.execute(Hash, connection)
       end
     end
   end

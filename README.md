@@ -1,7 +1,7 @@
 WebInk is a minimal framework for ruby assisting in website development. It
 uses rack to dispatch and works under linux. Database adapters shipped with
-webink are sqlite3 and mysql; a generic SQL adapter is available which can
-be extended to access your favorite SQL database. Look into the sqlite3 or
+webink are pg, sqlite3 and mysql; a generic SQL adapter is available which can
+be extended to access your favorite SQL database. Look into the pg, sqlite3 or
 mysql adapters for guidance.
 
 Here is a small guide to installing it.
@@ -12,9 +12,15 @@ rack-compatible server, as there are so many tutorials out there already.
 
 ## Version History and Upgrade paths
 
-### 3.1.2 -- 2014-03-08
+### 3.2.0 -- 2014-03-22
 
 * Added **webink_r** as dependency to the gem
+* Added **pg** gem support
+* Major refactoring on model and database interfaces
+  * *find_references* on model instances returns result additionally to
+    setting the appropriate accessor on the instance
+  * *find_references* finds arrays or single instances, depending on association
+* Extended String with *constantize*, *camelize* and *underscore*
 
 #### Upgrade path
 
@@ -24,11 +30,70 @@ Rack up files (ex. *config.ru*) need to add
   require 'webink/r'
 ```
 
+Former *find*
+
+```ruby
+  Ink::Database.database.find(Entry)
+  Ink::Database.database.find(Entry, "WHERE id=15")
+```
+
+now becomes
+
+```ruby
+  Entry.find
+  Entry.find{ |s| s.where('id=15') }
+```
+
+Former *find_references* and *find_union*
+
+```ruby
+  e = Entry.find{ |s| s.where('id=1') }.first
+  Ink::Database.database.find_references(Entry, e.pk, Comment)
+  Ink::Database.database.find_references(Entry, e.pk, Comment,
+    "AND comment.id>1")
+```
+
+now becomes
+
+```ruby
+  e = Entry.find{ |s| s.where('id=1').first
+  e.find_references(Comment)
+  e.find_references(Comment){ |s| s.and('comment.id>1') }
+```
+
+Former *query*
+
+```ruby
+  Ink::Database.database.query("SELECT * FROM entry;")
+```
+
+now becomes
+
+```ruby
+  Ink::R.select('*').from('entry').execute
+  Ink::R.select('*').from('entry').to_h
+```
+
+Former *query* mapping to array
+
+```ruby
+  Ink::Database.database.query("SELECT * FROM entry;", Array){ |a,k,v| a << v }
+```
+
+now becomes
+
+```ruby
+  Ink::R.select('*').from('entry').to_a
+  Ink::R.select('*').from('entry').execute(Array){ |a,k,v| a << v}
+```
+
+
 
 ## Requirements
 
-A linux server with ruby, rubygems, (lighttpd or apache or nginx), (mysql or
-sqlite3) and the installed gems rack, (mysql or sqlite3) and webink.
+A linux server with ruby, rubygems, (lighttpd or apache or nginx), (pg, mysql or
+sqlite3) and the installed gems rack, (pg, mysql or sqlite3), webink_r and
+webink.
 Also required is a rack-compatible server like thin or webrick, as the apache
 would only be proxy for the thin/webrick installation. Most rack-compatible
 servers are available as gems.
@@ -82,4 +147,4 @@ cloning the github repos, navigating into the repos root folder and running
 ```
 
 WebInk can be unit tested quite easily, it only requires the minitest and
-sqlite3 gems apart from webink.
+sqlite3 gems apart from webink and webink_r.
