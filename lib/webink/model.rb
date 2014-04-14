@@ -534,7 +534,7 @@ module Ink
     # in fields.
     # [returns:] key type or nil
     def self.foreign_key_type
-      self.primary_key_type
+      return Ink::Database.foreign_key_type
     end
 
   end

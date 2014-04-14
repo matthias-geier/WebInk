@@ -4,8 +4,11 @@ module Ink
 
     def initialize(config)
       @type = config[:db_type]
-      @db = PG.connect(config[:db_server], config[:db_port], nil, nil,
-        config[:db_database], config[:db_user], config[:db_pass])
+      @db = PG.connect({ :host => config[:db_server],
+        :port => config[:db_port],
+        :dbname => config[:db_database],
+        :user => config[:db_user],
+        :password => config[:db_pass] })
     end
 
     def tables

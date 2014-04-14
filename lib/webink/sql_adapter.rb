@@ -103,6 +103,16 @@ module Ink
 
     # Class method
     #
+    # Returns the foreign key type of a database. This does not necessarily
+    # overlap with the primary key type. i.e. postgres uses SERIAL for
+    # auto increments while the type is still INTEGER
+    # [returns:] SQL data type as string
+    def self.foreign_key_type
+      return "INTEGER"
+    end
+
+    # Class method
+    #
     # Formats a Time object according to the SQL TimeDate standard
     # [param date:] Time object
     # [returns:] Formatted string
