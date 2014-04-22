@@ -1,4 +1,4 @@
-class Wig < Ink::Model
+class User < Ink::Model
   def self.fields
     {
       :ref => "PRIMARY KEY",

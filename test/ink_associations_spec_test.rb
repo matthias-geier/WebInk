@@ -4,18 +4,18 @@ describe Ink::Model do
     before do
       @apple_tree = AppleTree.new(:color => "yellow")
       @apple_tree.save
-      tmp1 = Wig.new("length" => 16)
+      tmp1 = User.new("length" => 16)
       tmp1.save
-      tmp2 = Wig.new("length" => 17)
+      tmp2 = User.new("length" => 17)
       tmp2.save
-      @wig = Wig.new("length" => 15)
-      @wig.apple_tree = @apple_tree
-      @wig.save
+      @user = User.new("length" => 15)
+      @user.apple_tree = @apple_tree
+      @user.save
       @green_tree = AppleTree.new("green", "comment", 6)
       @green_tree.save
       @spray = ColorSpray.new("color" => "blue")
       @spray.apple_tree = [@apple_tree]
-      @spray.wig = @wig
+      @spray.user = @user
       @spray.save
     end
 
@@ -24,76 +24,76 @@ describe Ink::Model do
       @green_tree = nil
       @spray.delete
       @spray = nil
-      @wig.delete
-      @wig = nil
+      @user.delete
+      @user = nil
       @apple_tree.delete
       @apple_tree = nil
     end
 
     describe "one_one relationships" do
       before do
-        @wig.color_spray = nil
-        @spray.wig = nil
+        @user.color_spray = nil
+        @spray.user = nil
       end
 
       it "should assign from opposite side too" do
-        @spray.wig = []
+        @spray.user = []
         @spray.save
-        @wig.color_spray = @spray
-        @wig.save
-        @spray.find_references(Wig){ |s| s.and!("ref=#{@wig.pk}") }
-        assert @wig.pk, @spray.wig.pk
-        @wig.color_spray = []
-        @wig.save
+        @user.color_spray = @spray
+        @user.save
+        @spray.find_references(User){ |s| s.and!("ref=#{@user.pk}") }
+        assert @user.pk, @spray.user.pk
+        @user.color_spray = []
+        @user.save
       end
 
-      it "should find the wig as reference on the spray" do
-        @spray.find_references(Wig)
-        assert_equal @wig.pk, @spray.wig.pk
-        assert_equal @wig.pk, @spray.wig_ref
+      it "should find the user as reference on the spray" do
+        @spray.find_references(User)
+        assert_equal @user.pk, @spray.user.pk
+        assert_equal @user.pk, @spray.user_ref
       end
 
-      it "should find the spray as a single reference on the wig" do
-        @wig.find_references(ColorSpray)
-        assert_equal @spray.pk, @wig.color_spray.pk
-        assert_equal @spray.pk, @wig.color_spray_gnu
+      it "should find the spray as a single reference on the user" do
+        @user.find_references(ColorSpray)
+        assert_equal @spray.pk, @user.color_spray.pk
+        assert_equal @spray.pk, @user.color_spray_gnu
       end
 
-      it "should unset the wig when emptying the assoc on the spray" do
-        @spray.wig = []
+      it "should unset the user when emptying the assoc on the spray" do
+        @spray.user = []
         @spray.save
-        @wig.find_references(ColorSpray)
-        assert_nil @wig.color_spray
-        @wig.color_spray = @spray
-        @wig.save
+        @user.find_references(ColorSpray)
+        assert_nil @user.color_spray
+        @user.color_spray = @spray
+        @user.save
       end
     end
 
     describe "one_many relationships" do
       before do
-        @wig.apple_tree = nil
-        @apple_tree.wig = nil
+        @user.apple_tree = nil
+        @apple_tree.user = nil
       end
 
-      it "should find the wig as reference on the tree" do
-        @apple_tree.find_references(Wig)
-        assert_equal @wig.pk, @apple_tree.wig.first.pk
-        assert_equal @wig.pk, @apple_tree.wig_ref.first
+      it "should find the user as reference on the tree" do
+        @apple_tree.find_references(User)
+        assert_equal @user.pk, @apple_tree.user.first.pk
+        assert_equal @user.pk, @apple_tree.user_ref.first
       end
 
-      it "should find the tree as a single reference on the wig" do
-        @wig.find_references(AppleTree)
-        assert_equal @apple_tree.pk, @wig.apple_tree.pk
-        assert_equal @apple_tree.pk, @wig.apple_tree_id
+      it "should find the tree as a single reference on the user" do
+        @user.find_references(AppleTree)
+        assert_equal @apple_tree.pk, @user.apple_tree.pk
+        assert_equal @apple_tree.pk, @user.apple_tree_id
       end
 
-      it "should unset the wig when emptying the assoc on the tree" do
-        @apple_tree.wig = []
+      it "should unset the user when emptying the assoc on the tree" do
+        @apple_tree.user = []
         @apple_tree.save
-        @wig.find_references(AppleTree)
-        assert_nil @wig.apple_tree
-        @wig.apple_tree = @apple_tree
-        @wig.save
+        @user.find_references(AppleTree)
+        assert_nil @user.apple_tree
+        @user.apple_tree = @apple_tree
+        @user.save
       end
     end
 

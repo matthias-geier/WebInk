@@ -8,7 +8,7 @@ class ColorSpray < Ink::Model
   def self.foreign
     {
       "AppleTree" => "many_many",
-      "Wig" => "one_one",
+      "User" => "one_one",
     }
   end
 end

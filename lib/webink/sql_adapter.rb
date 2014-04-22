@@ -170,11 +170,19 @@ module Ink
       unless class_name.is_a?(Class)
         class_name = Ink::Model.classname(class_name)
       end
-      table_name = class_name.table_name
+      table_name = class_name.table_name!
       pk_name = class_name.primary_key
       return if table_name.nil? or pk_name.nil?
       response = self.query("SELECT MAX(#{pk_name}) as id FROM #{table_name};")
       return (response.empty?) ? nil : response.first["id"]
     end
+
+    # Class method
+    #
+    # [returns:] wrap-character for table names
+    def self.wrap_character
+      return '`'
+    end
+
   end
 end

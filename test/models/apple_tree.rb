@@ -10,7 +10,7 @@ class AppleTree < Ink::Model
 
   def self.foreign
     {
-      "Wig" => "many_one",
+      "User" => "many_one",
       "ColorSpray" => "many_many",
     }
   end

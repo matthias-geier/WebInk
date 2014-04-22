@@ -53,5 +53,9 @@ module Ink
       return [pk, "SERIAL", "PRIMARY KEY"]
     end
 
+    def self.wrap_character
+      return '\''
+    end
+
   end
 end

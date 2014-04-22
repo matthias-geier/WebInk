@@ -133,10 +133,12 @@ module Ink
   # (i.e. "apple_id")
   #
   #   self.table_name
+  #   self.sanitized_table_name or self.table_name!
   #
   # Generates a table representation of the class. (Apple as
   # "apple" and MyApple as "my_apple"). Essentially equivalent to
-  # snakecase.
+  # snakecase. The sanitized table name is wrapped with the
+  # adapter's wrapper character.
   #
   #
   #
@@ -352,13 +354,13 @@ module Ink
         s.where("#{self.class.primary_key}=" +
         "#{Ink::SqlAdapter.transform_to_sql(self.pk)}") }.empty?
 
-        query.insert.into(self.class.table_name).
+        query.insert.into(self.class.table_name!).
           send(' _!', column_value_map.keys.join(',')).
           values.send(' _!', column_value_map.values.join(',')).execute
 
         self.pk = Ink::Database.database.last_inserted_pk(self.class)
       else
-        query.update(self.class.table_name).
+        query.update(self.class.table_name!).
           set(column_value_map.map{ |k, v| "#{k}=#{v}" }.join(',')).
           where("#{self.class.primary_key}=" +
           "#{Ink::SqlAdapter.transform_to_sql(self.pk)}").execute
@@ -414,12 +416,12 @@ module Ink
       self.clear_associations
 
       pk_value = Ink::SqlAdapter.transform_to_sql(self.pk)
-      Ink::R.delete.from(self.class.table_name).
+      Ink::R.delete.from(self.class.table_name!).
         where("#{self.class.primary_key}=#{pk_value}").execute
     end
 
     def self.find
-      query = Ink::R.select('*').from(self.table_name)
+      query = Ink::R.select('*').from(self.table_name!)
       if block_given?
         query = yield(query)
       end
@@ -468,7 +470,7 @@ module Ink
         acc
       end
 
-      sql = Ink::R.create.table(self.table_name)._! do |_|
+      sql = Ink::R.create.table(self.table_name!)._! do |_|
         cols = self.fields.map do |k, v|
           if k == self.primary_key
             Ink::Database.database.primary_key_autoincrement(k).join(' ')
@@ -489,7 +491,21 @@ module Ink
     # This will retrieve a tablename-representation of the model name
     # [returns:] valid tablename
     def self.table_name
-      self.name.underscore
+      return self.name.underscore
+    end
+
+    # Class method
+    #
+    # This will retrieve a sanitized tablename-representation of the
+    # model name by wrapping it with the wrap-character defined in
+    # the adapter
+    # [returns:] wrapped valid tablename
+    def self.sanitized_table_name
+      wrapper = Ink::Database.database.wrap_character
+      return wrapper + self.table_name + wrapper
+    end
+    def self.table_name!
+      return self.sanitized_table_name
     end
 
     # Class method
@@ -534,7 +550,7 @@ module Ink
     # in fields.
     # [returns:] key type or nil
     def self.foreign_key_type
-      return Ink::Database.foreign_key_type
+      return Ink::Database.database.foreign_key_type
     end
 
   end
