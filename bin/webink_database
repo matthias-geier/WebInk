@@ -29,7 +29,7 @@ begin
     puts "Dropping old tables..."
     db_tables.each do |t|
       puts "...#{t}"
-      db.query "DROP TABLE #{t};"
+      db.query "DROP TABLE #{db.wrap_character}#{t}#{db.wrap_character};"
     end
   end
 

@@ -54,7 +54,7 @@ module Ink
     end
 
     def self.wrap_character
-      return '\''
+      return '"'
     end
 
   end

@@ -62,9 +62,9 @@ module Ink
       def find_references(pk, select_key, where_key, &blk)
         pk = Ink::SqlAdapter.transform_to_sql(pk)
         return @related_klass.find do |s|
-          s.where("`#{@related_klass.primary_key}`").in! do |sub|
-            sub.select("`#{select_key}`").from(self.foreign_key_table).
-              where("`#{where_key}`=#{pk}")
+          s.where("#{@related_klass.primary_key}").in! do |sub|
+            sub.select("#{select_key}").from(self.foreign_key_table).
+              where("#{where_key}=#{pk}")
           end
 
           if block_given?

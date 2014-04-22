@@ -150,9 +150,9 @@ module Ink
     def self.transform_from_sql(value)
       if value =~ /^NULL$/
         nil
-      elsif value =~ /^\d+$/
-        value.to_i
-      elsif value =~ /^\d+\.\d+$/
+      elsif value =~ /^\d+$/ || value =~ /^\d+(\.\d+)?e\+\d+$/
+        value.to_f.to_i
+      elsif value =~ /^\d+\.\d+(e\-\d+)?$/
         value.to_f
       elsif value.is_a?(String)
         value.gsub('&#39;', "'")
