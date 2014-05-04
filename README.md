@@ -21,6 +21,8 @@ rack-compatible server, as there are so many tutorials out there already.
     setting the appropriate accessor on the instance
   * *find_references* finds arrays or single instances, depending on association
 * Extended String with *constantize*, *camelize*, *underscore* and *execute*
+* Seeding the database is now done by adding a **db_seed.rb** in the project
+  folder
 
 #### Upgrade path
 
@@ -111,6 +113,7 @@ foldername "blog".
   config.rb   --this configures the project
   config.ru   --the rackup file to run the project
   routes.rb   --configures all the routing
+  db_seed.rb  --optional database seed
   controllers --this folder contains all controller files
   models      --this folder contains all models
   views       --this folder contains all views
@@ -121,8 +124,9 @@ To fetch this folder structure initially, call *webink_init* which comes
 with the gem. It will initialize your project with sample values.
 
 After creating some models, you can run *webink_database* to initialize
-the tables, and for some advanced use cases, copy the *webink_database*
-and use the loaded models to easily import data.
+the tables. When it is required to seed the databases with data, you can
+create a *db_seed.rb* file in your project folder which will be loaded
+for every database (application and test).
 
 For more information on the folders, have a look at the sample project.
 
