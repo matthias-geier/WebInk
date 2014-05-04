@@ -71,13 +71,13 @@ module Ink
 
       Dir.new("./controllers").select{ |c| c =~ /\.rb$/ }.each do |c|
         controller_camel = $1.camelize if c =~ /^(.*)\.rb$/
-        autoload(controller_camel, "./controllers/#{c}")
+        Object.autoload(controller_camel, "./controllers/#{c}")
       end
 
       model_files = Dir.new("./models").select{ |m| m =~ /\.rb$/ }
       model_files.each do |m|
         model_camel = $1.camelize if m =~ /^(.*)\.rb$/
-        autoload(model_camel, "./models/#{m}")
+        Object.autoload(model_camel, "./models/#{m}")
       end
       return model_files.map do |m|
         load("./models/#{m}")
