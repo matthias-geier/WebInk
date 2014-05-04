@@ -11,18 +11,33 @@ module Ink
   # Sample config for MySQL:
   #   config = {
   #     :production        => true,
-  #     :db_type           => "mysql",
-  #     :db_user           => "yourusername",
-  #     :db_pass           => "yourpassword",
-  #     :db_database       => "yourdatabase",
-  #     :db_server         => "localhost",
+  #     :app_db => {
+  #       :db_type           => "mysql",
+  #       :db_user           => "yourusername",
+  #       :db_pass           => "yourpassword",
+  #       :db_database       => "yourdatabase",
+  #       :db_server         => "localhost"
+  #     },
+  #     :test_db => {
+  #       :db_type           => "mysql",
+  #       :db_user           => "yourusername",
+  #       :db_pass           => "yourpassword",
+  #       :db_database       => "yourtestdatabase",
+  #       :db_server         => "localhost"
+  #     }
   #   }
   #
   # Sample config for SQLite3:
   #   config = {
   #     :production        => true,
-  #     :db_type           => "sqlite3",
-  #     :db_server         => "/full/path/to/database.sqlite",
+  #     :app_db => {
+  #       :db_type           => "sqlite3",
+  #       :db_server         => "/full/path/to/database.sqlite",
+  #     },
+  #     :test_db => {
+  #       :db_type           => "sqlite3",
+  #       :db_server         => "/full/path/to/test_database.sqlite",
+  #     }
   #   }
   #
   # == Adapters
@@ -136,28 +151,6 @@ module Ink
     # [returns:] Array of tables
     def tables
       @db.tables
-    end
-
-    # Class method
-    #
-    # Transform a value to sql representative values.
-    # This means quotes are escaped, nils are transformed
-    # and everything else is quoted.
-    # [param value:] Object
-    # [returns:] transformed String
-    def self.transform_to_sql(value)
-      @db_class.transform_to_sql(value)
-    end
-
-    # Class method
-    #
-    # Transform a value from sql to objects.
-    # This means nils, integer, floats and strings
-    # are imported correctly.
-    # [param value:] String
-    # [returns:] Object
-    def self.transform_from_sql(value)
-      @db_class.transform_from_sql(value)
     end
 
     # Instance method

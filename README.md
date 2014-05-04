@@ -12,7 +12,7 @@ rack-compatible server, as there are so many tutorials out there already.
 
 ## Version History and Upgrade paths
 
-### 3.2.0 -- 2014-03-22
+### 3.2.0 -- 2014-04-05
 
 * Added **webink_r** as dependency to the gem
 * Added **pg** gem support
@@ -20,7 +20,7 @@ rack-compatible server, as there are so many tutorials out there already.
   * *find_references* on model instances returns result additionally to
     setting the appropriate accessor on the instance
   * *find_references* finds arrays or single instances, depending on association
-* Extended String with *constantize*, *camelize* and *underscore*
+* Extended String with *constantize*, *camelize*, *underscore* and *execute*
 
 #### Upgrade path
 

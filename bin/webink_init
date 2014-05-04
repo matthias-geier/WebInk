@@ -11,24 +11,33 @@ CFG_RU
 
 config_rb = <<CFG_RB
 Ink::Beauty.config = {
-  #sqlite3 config
-  :db_type => "sqlite3",
-  :db_server => "./db.sqlite",
+  :app_db => {
+    #sqlite3 config
+    :db_type => "sqlite3",
+    :db_server => "./db.sqlite",
 
-  #mysql config
-  #:db_type => "mysql",
-  #:db_user => "db_username",
-  #:db_pass => "db_password",
-  #:db_database => "db_database_name",
-  #:db_server => "localhost",
+    #mysql config
+    #:db_type => "mysql",
+    #:db_user => "db_username",
+    #:db_pass => "db_password",
+    #:db_database => "db_database_name",
+    #:db_server => "localhost",
 
-  #postgresql config
-  #:db_type => "pg",
-  #:db_database => "db_database_name",
-  #:db_user => "db_username",
-  #:db_pass => "db_password",
-  #:db_port => "5432",
-  #:db_server => "localhost",
+    #postgresql config
+    #:db_type => "pg",
+    #:db_database => "db_database_name",
+    #:db_user => "db_username",
+    #:db_pass => "db_password",
+    #:db_port => "5432",
+    #:db_server => "localhost",
+  },
+  :test_db => {
+    #sqlite3 config
+    :db_type => "sqlite3",
+    :db_server => "./test_db.sqlite",
+
+    # or any other config
+  }
 }
 CFG_RB
 
@@ -42,7 +51,7 @@ Ink::Beauty.routes = [
 ]
 RT_RB
 
-if File.exist?("config") or File.exist?("config.rb")
+if File.exist?("config") || File.exist?("config.rb")
   puts "Directory already initialized. Exiting."
   exit(0)
 end

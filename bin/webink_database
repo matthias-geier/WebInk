@@ -20,32 +20,34 @@ model_classes = Dir.open("./models").reduce([]) do |acc, model|
   acc
 end
 
-begin
-  Ink::Database.create(config)
-  db = Ink::Database.database
-  db_tables = db.tables
+[:app_db, :test_db].each do |db|
+  begin
+    Ink::Database.create(config[db])
+    db = Ink::Database.database
+    db_tables = db.tables
 
-  if ARGV[0] == "drop"
-    puts "Dropping old tables..."
-    db_tables.each do |t|
-      puts "...#{t}"
-      db.query "DROP TABLE #{db.wrap_character}#{t}#{db.wrap_character};"
-    end
-  end
-
-  puts "Creating new tables..."
-  model_classes.each do |m|
-    puts "...for class: #{m.name}:"
-    c = m.create
-    puts c
-    c.each do |exec|
-      begin
-        db.query exec
-      rescue => ex
-        puts ex
+    if ARGV[0] == "drop"
+      puts "Dropping old tables..."
+      db_tables.each do |t|
+        puts "...#{t}"
+        db.query "DROP TABLE #{db.wrap_character}#{t}#{db.wrap_character};"
       end
     end
+
+    puts "Creating new tables..."
+    model_classes.each do |m|
+      puts "...for class: #{m.name}:"
+      c = m.create
+      puts c
+      c.each do |exec|
+        begin
+          db.query exec
+        rescue => ex
+          puts ex
+        end
+      end
+    end
+  rescue Exception => bang
+    puts "SQLError: #{bang}."
   end
-rescue Exception => bang
-  puts "SQLError: #{bang}."
 end
