@@ -23,6 +23,7 @@ module Ink
 
         puts "Creating new tables..."
         model_classes.each do |m|
+          next unless m < Ink::Model
           puts "...for class: #{m.name}:"
           c = m.create
           puts c
@@ -40,6 +41,7 @@ module Ink
         end
       rescue Exception => bang
         puts "SQLError: #{bang}."
+        puts bang.backtrace.join("\n")
       end
     end
   end
