@@ -9,7 +9,7 @@ Gem::Specification.new do |s|
   s.files = Dir['lib/*.rb'] + Dir['lib/webink/*.rb'] +
     Dir['lib/webink/extensions/*.rb'] + Dir['lib/webink/association/*.rb'] +
     Dir['lib/webink/database/*.rb'] + Dir['bin/*'] + [ "LICENSE.md" ]
-  s.executables = ["webink_database", "webink_init"]
+  s.executables = ["webink_database", "webink_init", "webink_testrunner"]
   s.required_ruby_version = '>= 1.9.3'
   s.add_runtime_dependency('rack', '~> 1.5')
   s.add_runtime_dependency('webink_r', '~> 0.3')

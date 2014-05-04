@@ -1,0 +1,28 @@
+#!/usr/bin/env ruby
+
+gem 'minitest'
+
+require 'webink/r'
+require 'webink'
+require 'minitest/autorun'
+
+beauty = Ink::Beauty.new
+config = beauty.load_config
+model_classes = beauty.load_dependencies
+if ARGV[0] == 'drop'
+  Ink::Database::Util.build_database(config[:test_db], model_classes, true)
+end
+
+describe Ink::Model do
+  before do
+    Ink::Database.database.query("BEGIN TRANSACTION")
+  end
+
+  after do
+    Ink::Database.database.query("ROLLBACK")
+  end
+
+  Dir.open("./test").each do |t|
+    load "./test/#{t}" if t =~ /_test\.rb$/
+  end
+end

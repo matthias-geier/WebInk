@@ -23,6 +23,7 @@ rack-compatible server, as there are so many tutorials out there already.
 * Extended String with *constantize*, *camelize*, *underscore* and *execute*
 * Seeding the database is now done by adding a **db_seed.rb** in the project
   folder
+* Add testrunner to execute local unit tests
 
 #### Upgrade path
 
@@ -118,6 +119,7 @@ foldername "blog".
   models      --this folder contains all models
   views       --this folder contains all views
   files       --all static files should be located here
+  test        --a place for the unit tests
 ```
 
 To fetch this folder structure initially, call *webink_init* which comes
@@ -152,6 +154,23 @@ cloning the github repos, navigating into the repos root folder and running
 
 WebInk can be unit tested quite easily, it only requires the minitest and
 sqlite3 gems apart from webink and webink_r.
+
+## Unit Tests
+
+Every new project that is created with *webink_init* adds a folder **test** to
+the application folder. All tests should be put in there.
+
+All tests can be executed by calling the following command in the application
+root folder.
+
+```sh
+  webink_testrunner
+```
+
+Tests are written in *minitest/spec*. Each testfile is executed inside a
+transaction, but make sure to reset all saved changes in the **after** sections
+of your specs. Examples are the webink unit tests! Knock yourself out, the
+tests are lightning fast.
 
 ## Demo
 
