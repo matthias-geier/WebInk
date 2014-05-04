@@ -16,54 +16,26 @@ require './lib/webink/sql_adapter.rb'
 require './lib/sqlite3_adapter.rb'
 require './lib/webink/extensions/r.rb'
 require './lib/webink/extensions/string.rb'
+require './lib/webink/database/util.rb'
 require 'minitest/autorun'
-
-config = {
-  :db_type => "sqlite3",
-  :db_server => "./test.sqlite"
-}
 
 Dir.chdir(File.dirname(__FILE__))
 
-require "#{config[:db_type]}"
+beauty = Ink::Beauty.new
+config = beauty.load_config
+model_classes = beauty.load_dependencies
+Ink::Database::Util.build_all_databases(config, model_classes, true)
 
-model_classes = Dir.open("./models").reduce([]) do |acc, model|
-  load "./models/#{model}" if model =~ /\.rb$/
-  acc << $1.camelize.constantize if model =~ /^(.*)\.rb$/
-  acc
-end
-
-begin
-  Ink::Database.create(config)
-  db = Ink::Database.database
-  db.tables.each do |t|
-    db.query("DROP TABLE #{t}")
-  end
-  model_classes.each do |m|
-    m.create.each do |exec|
-      begin
-        puts exec
-        db.query exec
-      rescue => ex
-        puts ex
-      end
-    end
+describe Ink::Model do
+  before do
+    Ink::Database.database.query("BEGIN TRANSACTION")
   end
 
-  describe Ink::Model do
-    before do
-      Ink::Database.database.query("BEGIN TRANSACTION")
-    end
-
-    after do
-      Ink::Database.database.query("ROLLBACK")
-    end
-
-    Dir.open("./").each do |t|
-      load "./#{t}" if t =~ /_test\.rb$/
-    end
+  after do
+    Ink::Database.database.query("ROLLBACK")
   end
-rescue Exception => bang
-  puts "SQLError: #{bang}."
-  puts bang.backtrace.join("\n")
+
+  Dir.open("./").each do |t|
+    load "./#{t}" if t =~ /_test\.rb$/
+  end
 end

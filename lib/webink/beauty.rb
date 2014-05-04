@@ -61,12 +61,30 @@ module Ink
 
     # Instance method
     #
-    # Loads models and the controller. Requires the database type.
+    # Loads the models, requires the database type.
+    # [returns: Array of loaded models
+    def load_dependencies
+      @params[:config].keys.select{ |k| k.to_s =~ /_db$/ }.each do |db|
+        require "#{@params[:config][db][:db_type]}"
+        require "#{@params[:config][db][:db_type]}_adapter"
+      end
+
+      model_files = Dir.new("./models").select{ |m| m =~ /\.rb$/ }
+      model_files.each do |m|
+        model_camel = $1.camelize if m =~ /^(.*)\.rb$/
+        autoload(model_camel, "./models/#{m}")
+      end
+      return model_files.map do |m|
+        load("./models/#{m}")
+        $1.camelize.constantize if m =~ /^(.*)\.rb$/
+      end
+    end
+
+    # Instance method
+    #
+    # Loads the controller.
     # [returns:] Controller class
     def load_env
-      require "#{@params[:config][:app_db][:db_type]}"
-      require "#{@params[:config][:app_db][:db_type]}_adapter"
-      Dir.new("./models").each{ |m| load "./models/#{m}" if m =~ /\.rb$/ }
       load "./controllers/#{@params[:controller]}.rb"
       return Ink::Controller.verify(@params[:controller]).new(@params)
     end
@@ -89,6 +107,7 @@ module Ink
       end
       self.load_config
       self.load_routes
+      self.load_dependencies
       return @params[:file] ? nil : self.load_env #static file requests are nil
     end
 

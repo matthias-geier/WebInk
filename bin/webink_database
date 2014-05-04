@@ -3,51 +3,8 @@
 require 'webink/r'
 require 'webink'
 
-config = nil
-
-begin
-  config = Ink::Beauty.new.load_config
-rescue Exception => bang
-  puts "Error while loading config: #{bang}."
-end
-
-require "#{config[:db_type]}"
-require "#{config[:db_type]}_adapter"
-
-model_classes = Dir.open("./models").reduce([]) do |acc, model|
-  load "./models/#{model}" if model =~ /\.rb$/
-  acc << $1.camelize.constantize if model =~ /^(.*)\.rb$/
-  acc
-end
-
-[:app_db, :test_db].each do |db|
-  begin
-    Ink::Database.create(config[db])
-    db = Ink::Database.database
-    db_tables = db.tables
-
-    if ARGV[0] == "drop"
-      puts "Dropping old tables..."
-      db_tables.each do |t|
-        puts "...#{t}"
-        db.query "DROP TABLE #{db.wrap_character}#{t}#{db.wrap_character};"
-      end
-    end
-
-    puts "Creating new tables..."
-    model_classes.each do |m|
-      puts "...for class: #{m.name}:"
-      c = m.create
-      puts c
-      c.each do |exec|
-        begin
-          db.query exec
-        rescue => ex
-          puts ex
-        end
-      end
-    end
-  rescue Exception => bang
-    puts "SQLError: #{bang}."
-  end
-end
+beauty = Ink::Beauty.new
+config = beauty.load_config
+model_classes = beauty.load_dependencies
+Ink::Database::Util.build_all_databases(config, model_classes,
+  ARGV[0] == "drop")
