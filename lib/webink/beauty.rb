@@ -61,12 +61,17 @@ module Ink
 
     # Instance method
     #
-    # Loads the models, requires the database type.
+    # Loads the models, requires the database type, preloads the controllers.
     # [returns: Array of loaded models
     def load_dependencies
       @params[:config].keys.select{ |k| k.to_s =~ /_db$/ }.each do |db|
         require "#{@params[:config][db][:db_type]}"
         require "#{@params[:config][db][:db_type]}_adapter"
+      end
+
+      Dir.new("./controllers").select{ |c| c =~ /\.rb$/ }.each do |c|
+        controller_camel = $1.camelize if c =~ /^(.*)\.rb$/
+        autoload(controller_camel, "./controllers/#{c}")
       end
 
       model_files = Dir.new("./models").select{ |m| m =~ /\.rb$/ }
