@@ -23,7 +23,7 @@ rack-compatible server, as there are so many tutorials out there already.
 * Extended String with *constantize*, *camelize*, *underscore* and *execute*
 * Seeding the database is now done by adding a **db_seed.rb** in the project
   folder
-* Add testrunner to execute local unit tests
+* Added testrunner to execute local unit tests
 
 #### Upgrade path
 
